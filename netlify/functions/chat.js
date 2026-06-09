@@ -1,5 +1,6 @@
 // netlify/functions/chat.js
-// Pulls Chat B agent prompt + CS-1 from Supabase at session start
+// Loads governing doc (chat-b) at session start.
+// Fetches CS-1 on-demand only when user selects Option B (North Star brief).
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -17,6 +18,21 @@ async function getPrompt(skillId) {
   return data?.[0]?.system_prompt || null;
 }
 
+// Detect whether the user has selected Option B (North Star brief)
+// Looks across all user messages for clear Option B signals
+function userSelectedOptionB(messages) {
+  const signals = ['option b', 'show me my brief', 'north star brief', 'my brief', 'morning brief'];
+  for (const msg of messages) {
+    if (msg.role !== 'user') continue;
+    const text = msg.content.toLowerCase().trim();
+    // Single letter 'b' as standalone selection
+    if (text === 'b') return true;
+    // Check for any signal phrase
+    if (signals.some(s => text.includes(s))) return true;
+  }
+  return false;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: corsHeaders(), body: '' };
@@ -31,18 +47,21 @@ exports.handler = async (event) => {
   try {
     const { messages, context, userName } = JSON.parse(event.body);
 
-    // Fetch Chat B agent prompt + CS-1 from Supabase
-    const [agentPrompt, cs1Prompt] = await Promise.all([
-      getPrompt('chat-b'),
-      getPrompt('cs-1')
-    ]);
+    // Always load governing doc
+    const governingPrompt = await getPrompt('chat-b');
 
-    if (!agentPrompt) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Agent prompt not found in Supabase' }) };
+    if (!governingPrompt) {
+      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Governing doc not found in Supabase' }) };
     }
 
-    // Assemble full system prompt
-    const systemPrompt = agentPrompt + (cs1Prompt ? '\n\n---\n\n## CS-1 — MORNING MEETING (appended skill file)\n\n' + cs1Prompt : '');
+    // Only fetch CS-1 if user has selected Option B
+    let systemPrompt = governingPrompt;
+    if (userSelectedOptionB(messages)) {
+      const cs1Prompt = await getPrompt('cs-1');
+      if (cs1Prompt) {
+        systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
+      }
+    }
 
     const contextStr = buildContextString(context);
 
