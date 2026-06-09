@@ -1,6 +1,8 @@
 // netlify/functions/chat.js
 // Loads governing doc (chat-b) at session start.
-// Fetches CS-1 on-demand only when user selects Option B (North Star brief).
+// Fetches CS-1 on-demand when user selects Option B (North Star brief).
+// Fetches CS-9 on-demand when user confirms a numbered offer from CS-1 or Option A.
+// Fetches CS-Receipt on-demand when session close is detected.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -18,19 +20,71 @@ async function getPrompt(skillId) {
   return data?.[0]?.system_prompt || null;
 }
 
-// Detect whether the user has selected Option B (North Star brief)
-// Looks across all user messages for clear Option B signals
+// Option B selected: user wants their North Star brief
 function userSelectedOptionB(messages) {
   const signals = ['option b', 'show me my brief', 'north star brief', 'my brief', 'morning brief'];
   for (const msg of messages) {
     if (msg.role !== 'user') continue;
     const text = msg.content.toLowerCase().trim();
-    // Single letter 'b' as standalone selection
     if (text === 'b') return true;
-    // Check for any signal phrase
     if (signals.some(s => text.includes(s))) return true;
   }
   return false;
+}
+
+// CS-9 trigger: user has confirmed a numbered offer from CS-1 (Option B) or Option A.
+// Signals: user replies with a single number 1-3, or explicitly confirms an offer.
+// Only fires once CS-1 or Option A has already been active (i.e. Option B was selected
+// or the conversation has reached the offer-presentation stage).
+function cs9ShouldLoad(messages) {
+  // CS-9 only relevant if Option B was selected OR assistant has presented numbered offers
+  const assistantPresentedOffers = messages.some(msg =>
+    msg.role === 'assistant' &&
+    (
+      msg.content.includes('Here are three ways I can help') ||
+      msg.content.includes('three ways I can help right now') ||
+      msg.content.includes('How I Can Help Right Now')
+    )
+  );
+  if (!assistantPresentedOffers) return false;
+
+  // Look for user confirming a numbered offer after the assistant presented them
+  const offerPresentedIdx = messages.findIndex(msg =>
+    msg.role === 'assistant' &&
+    (
+      msg.content.includes('Here are three ways I can help') ||
+      msg.content.includes('three ways I can help right now') ||
+      msg.content.includes('How I Can Help Right Now')
+    )
+  );
+
+  // Check messages after the offer was presented
+  const afterOffers = messages.slice(offerPresentedIdx + 1);
+  const confirmSignals = ['1', '2', '3', 'option 1', 'option 2', 'option 3', 'yes', 'let\'s do that', 'that one', 'go with'];
+  for (const msg of afterOffers) {
+    if (msg.role !== 'user') continue;
+    const text = msg.content.toLowerCase().trim();
+    if (confirmSignals.some(s => text === s || text.startsWith(s + ' ') || text.startsWith(s + ','))) return true;
+  }
+  return false;
+}
+
+// CS-Receipt trigger: session is winding down.
+// Signals: user or context indicates they are done for the session.
+function csReceiptShouldLoad(messages) {
+  const closeSignals = [
+    'that\'s it', 'that is it', 'we\'re done', 'we are done',
+    'close it out', 'close the session', 'session closed',
+    'close out', 'wrap up', 'wrap it up',
+    'i\'m done', 'i am done', 'all done',
+    'thanks, that\'s all', 'that\'s all for now', 'nothing else',
+    'good to go', 'let\'s close'
+  ];
+  // Only look at the most recent user message — avoid false positives from mid-session
+  const userMessages = messages.filter(m => m.role === 'user');
+  if (userMessages.length === 0) return false;
+  const lastUserMsg = userMessages[userMessages.length - 1].content.toLowerCase().trim();
+  return closeSignals.some(s => lastUserMsg.includes(s));
 }
 
 exports.handler = async (event) => {
@@ -54,12 +108,30 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Governing doc not found in Supabase' }) };
     }
 
-    // Only fetch CS-1 if user has selected Option B
+    // Build system prompt — start with governing doc, append protocols as triggered
     let systemPrompt = governingPrompt;
+
+    // CS-1: load when user selects Option B
     if (userSelectedOptionB(messages)) {
       const cs1Prompt = await getPrompt('cs-1');
       if (cs1Prompt) {
         systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
+      }
+    }
+
+    // CS-9: load when user confirms a numbered offer (after CS-1 or Option A presents them)
+    if (cs9ShouldLoad(messages)) {
+      const cs9Prompt = await getPrompt('cs-9');
+      if (cs9Prompt) {
+        systemPrompt += '\n\n---\n\n## CS-9 — RECOMMENDATIONS RESPONSE PROTOCOL\n\n' + cs9Prompt;
+      }
+    }
+
+    // CS-Receipt: load when session close is detected
+    if (csReceiptShouldLoad(messages)) {
+      const csReceiptPrompt = await getPrompt('cs-receipt');
+      if (csReceiptPrompt) {
+        systemPrompt += '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt;
       }
     }
 
@@ -157,7 +229,7 @@ function buildContextString(ctx) {
 
   if (ctx.user) {
     lines.push('\n=== USER ===');
-    lines.push('user_id: ' + ctx.user.id);
+    lines.push('[SYSTEM: SESSION_USER_ID = ' + ctx.user.id + ']');
     lines.push('display_name: ' + ctx.user.display_name);
   }
 
