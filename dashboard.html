@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>North Star OS — Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1a1a;
+      --surface: #242424;
+      --border: #333;
+      --gold: #B8860B;
+      --gold-light: #D4A017;
+      --text: #e0e0e0;
+      --muted: #888;
+      --sidebar-w: 64px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 8px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+    }
+    .sidebar-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+    .nav-btn:hover { background: #222; color: var(--text); }
+    .nav-btn.active { background: #2a2200; color: var(--gold); }
+    .nav-btn .tooltip {
+      position: absolute;
+      left: 52px;
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text);
+      white-space: nowrap;
+      display: none;
+      z-index: 100;
+    }
+    .nav-btn:hover .tooltip { display: block; }
+    .sidebar-bottom {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* VIEWS */
+    .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* DASHBOARD VIEW */
+    .dash-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 32px 60px;
+    }
+    .dash-header {
+      margin-bottom: 28px;
+    }
+    .dash-greeting {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .dash-greeting span { color: var(--gold); }
+    .dash-date {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .gold-rule {
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      margin: 20px 0;
+      border-radius: 2px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .card.full { grid-column: 1 / -1; }
+    .card-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.5;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-gold { background: #2a2200; color: var(--gold); }
+    .badge-green { background: #1a2e1a; color: #6dbf6d; }
+    .badge-gray { background: #2a2a2a; color: #aaa; }
+
+    .recent-list { list-style: none; }
+    .recent-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .recent-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+    .recent-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* CHAT VIEW */
+    .chat-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .chat-header-icon {
+      width: 32px;
+      height: 32px;
+      background: #2a2200;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .chat-header-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .chat-header-sub { font-size: 12px; color: var(--muted); }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .msg {
+      max-width: 80%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .msg.user .msg-bubble {
+      background: var(--gold);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant .msg-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-time {
+      font-size: 10px;
+      color: var(--muted);
+      padding: 0 4px;
+    }
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+    .typing-dot {
+      width: 7px; height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: typing 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-4px); }
+    }
+
+    .chat-input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .chat-input-wrap {
+      display: flex;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      align-items: flex-end;
+      transition: border 0.15s;
+    }
+    .chat-input-wrap:focus-within { border-color: var(--gold); }
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+    .chat-input::placeholder { color: var(--muted); }
+    .send-btn {
+      width: 34px;
+      height: 34px;
+      background: var(--gold);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+      font-size: 16px;
+    }
+    .send-btn:hover { background: var(--gold-light); }
+    .send-btn:disabled { background: #444; cursor: not-allowed; }
+
+    .empty-chat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 16px;
+      color: var(--muted);
+    }
+    .empty-chat-icon { font-size: 40px; opacity: 0.4; }
+    .empty-chat-title { font-size: 16px; font-weight: 600; color: #666; }
+    .empty-chat-sub { font-size: 13px; text-align: center; max-width: 280px; line-height: 1.5; }
+    .prompt-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* LOADING OVERLAY */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 999;
+    }
+    .loading-logo {
+      width: 52px;
+      height: 52px;
+      background: var(--gold);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #fff;
+    }
+    .loading-text { font-size: 14px; color: var(--muted); }
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #333;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-logo">★</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading your operating system…</div>
+</div>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">★</div>
+  <div class="nav-btn active" id="nav-dash" onclick="switchView('dash')">
+    ⊞
+    <div class="tooltip">Dashboard</div>
+  </div>
+  <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">
+    ✦
+    <div class="tooltip">Daily Brief</div>
+  </div>
+  <div class="nav-btn" id="nav-history" onclick="switchView('history')">
+    ◷
+    <div class="tooltip">Session History</div>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="nav-btn" id="logout-btn" onclick="logout()" title="Sign out">
+      ⎋
+      <div class="tooltip">Sign out</div>
+    </div>
+    <div class="avatar" id="user-avatar">?</div>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Dashboard View -->
+  <div class="view active" id="view-dash">
+    <div class="dash-content" id="dash-content">
+      <div class="dash-header">
+        <div class="dash-greeting">Good <span id="time-greeting">morning</span>, <span id="user-first-name" class="gold-text" style="color:var(--gold)">…</span></div>
+        <div class="dash-date" id="today-date"></div>
+      </div>
+      <div class="gold-rule"></div>
+
+      <div class="cards-grid" id="dash-cards">
+        <!-- Populated by JS -->
+        <div class="card full" style="text-align:center;padding:40px;color:var(--muted);">
+          <div style="font-size:24px;margin-bottom:12px;">⋯</div>
+          Loading your data…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat View -->
+  <div class="view" id="view-chat">
+    <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="chat-header-icon">✦</div>
+        <div>
+          <div class="chat-header-title">Daily Brief</div>
+          <div class="chat-header-sub">Chief of Staff — direct line</div>
+        </div>
+      </div>
+      <div class="messages" id="messages">
+        <div class="empty-chat" id="empty-state">
+          <div class="empty-chat-icon">✦</div>
+          <div class="empty-chat-title">Your Chief of Staff is ready</div>
+          <div class="empty-chat-sub">Ask anything about your operating picture, or start with one of these:</div>
+          <div class="prompt-chips">
+            <div class="chip" onclick="sendChip(this)">Give me my brief</div>
+            <div class="chip" onclick="sendChip(this)">What's my focus this week?</div>
+            <div class="chip" onclick="sendChip(this)">What did I accomplish recently?</div>
+            <div class="chip" onclick="sendChip(this)">Where am I in the quarter?</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History View -->
+  <div class="view" id="view-history">
+    <div class="dash-content">
+      <div class="dash-header">
+        <div class="dash-greeting" style="font-size:20px;">Session History</div>
+        <div class="dash-date">Your recent sessions</div>
+      </div>
+      <div class="gold-rule"></div>
+      <div id="history-list">
+        <div style="text-align:center;padding:40px;color:var(--muted);">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
+const API_ENDPOINT = '/api/chat'; // Netlify function
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let session = null;
+let userProfile = null;
+let chatHistory = [];
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // DEV MODE — bypass auth, use Alzay's profile directly
+  const DEV_EMAIL = 'coveted.consultant@gmail.com';
+  session = { token: 'dev', userId: '39d59f4c-3c98-4469-b65c-000ee97cf913', email: DEV_EMAIL };
+  await loadProfile(DEV_EMAIL);
+  await loadDashboard();
+  document.getElementById('loading').style.display = 'none';
+});
+
+// ─── SUPABASE HELPER ─────────────────────────────────────────────────────────
+async function sbFetch(path, extraHeaders = {}, body = null) {
+  const opts = {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      ...extraHeaders
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPABASE_URL + path, opts);
+}
+
+async function sbQuery(table, params = '', token = null) {
+  const headers = { 'apikey': SUPABASE_ANON_KEY };
+  // Only set Authorization if it's a real token (not dev bypass)
+  if (token && token !== 'dev') headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers });
+  return res.json();
+}
+
+// ─── LOAD PROFILE ────────────────────────────────────────────────────────────
+async function loadProfile(email) {
+  const rows = await sbQuery('profiles', `email=eq.${encodeURIComponent(email)}&select=id,display_name,email&limit=1`);
+  if (rows && rows.length > 0) {
+    userProfile = rows[0];
+    localStorage.setItem('ns_profile', JSON.stringify(userProfile));
+    initUI();
+  }
+}
+
+function initUI() {
+  const name = userProfile?.display_name || userProfile?.email || '';
+  const firstName = name.split(' ')[0];
+  document.getElementById('user-first-name').textContent = firstName;
+  document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
+
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : 'evening';
+  document.getElementById('time-greeting').textContent = greet;
+
+  const now = new Date();
+  document.getElementById('today-date').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+// ─── LOAD DASHBOARD DATA ─────────────────────────────────────────────────────
+async function loadDashboard() {
+  if (!userProfile?.id) return;
+  const uid = userProfile.id;
+  const tok = session.token;
+
+  // Fetch in parallel
+  const [aop, quarterly, receipts] = await Promise.all([
+    sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival,mission_statement&order=created_at.desc&limit=1`, tok),
+    sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal,quarterly_watch_out&order=created_at.desc&limit=1`, tok),
+    sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,bronze_status,completion_status,progress_position&order=session_date.desc&limit=5`, tok),
+  ]);
+
+  renderDashboard(aop?.[0], quarterly?.[0], receipts || []);
+  loadHistory(receipts || []);
+}
+
+function renderDashboard(aop, quarterly, receipts) {
+  const el = document.getElementById('dash-cards');
+
+  const completedRecent = receipts.filter(r => r.completion_status === 'gold' || r.completion_status === 'silver' || r.completion_status === 'bronze');
+  const lastReceipt = receipts[0];
+
+  el.innerHTML = `
+    ${quarterly ? `
+    <div class="card">
+      <div class="card-label">Professional Focus</div>
+      <div class="card-value">${esc(quarterly.quarterly_focus_professional || '—')}</div>
+      <div class="card-sub">${esc(quarterly.quarter || '')}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Personal Focus</div>
+      <div class="card-value">${esc(quarterly.quarterly_focus_personal || '—')}</div>
+      ${quarterly.quarterly_watch_out ? `<div class="card-sub">Watch out: ${esc(quarterly.quarterly_watch_out)}</div>` : ''}
+    </div>` : ''}
+
+    ${aop ? `
+    <div class="card full">
+      <div class="card-label">Annual Arrival</div>
+      <div class="card-value">${esc(aop.annual_arrival || '—')}</div>
+      ${aop.mission_statement ? `<div class="card-sub" style="margin-top:10px;font-size:13px;color:#aaa;">${esc(aop.mission_statement)}</div>` : ''}
+    </div>` : ''}
+
+    ${lastReceipt ? `
+    <div class="card full">
+      <div class="card-label">Most Recent Session</div>
+      <div class="card-value" style="display:flex;align-items:center;gap:10px;">
+        ${esc(lastReceipt.bronze_task || '—')}
+        ${lastReceipt.completion_status ? `<span class="badge badge-${lastReceipt.completion_status === 'gold' ? 'gold' : lastReceipt.completion_status === 'silver' ? 'gray' : 'green'}">${lastReceipt.completion_status}</span>` : ''}
+      </div>
+      <div class="card-sub">${formatDate(lastReceipt.session_date)} ${lastReceipt.progress_position ? '· ' + esc(lastReceipt.progress_position) : ''}</div>
+    </div>` : ''}
+
+    ${receipts.length === 0 ? `
+    <div class="card full" style="text-align:center;padding:32px;color:var(--muted);">
+      <div style="font-size:24px;margin-bottom:12px;">✦</div>
+      No sessions yet. Open the Daily Brief to get started.
+    </div>` : ''}
+  `;
+}
+
+function loadHistory(receipts) {
+  const el = document.getElementById('history-list');
+  if (!receipts.length) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">No sessions yet.</div>';
+    return;
+  }
+  el.innerHTML = receipts.map(r => `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-label">${formatDate(r.session_date)}</div>
+        ${r.completion_status ? `<span class="badge badge-${r.completion_status === 'gold' ? 'gold' : r.completion_status === 'silver' ? 'gray' : 'green'}">${r.completion_status}</span>` : ''}
+      </div>
+      <div class="card-value" style="font-size:14px;">${esc(r.bronze_task || '—')}</div>
+      ${r.progress_position ? `<div class="card-sub" style="margin-top:6px;">${esc(r.progress_position)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ─── CHAT ────────────────────────────────────────────────────────────────────
+function switchView(name) {
+  ['dash','chat','history'].forEach(v => {
+    document.getElementById('view-' + v).classList.toggle('active', v === name);
+    document.getElementById('nav-' + v)?.classList.toggle('active', v === name);
+  });
+}
+
+function sendChip(el) {
+  document.getElementById('chat-input').value = el.textContent;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !session) return;
+
+  const sendBtn = document.getElementById('send-btn');
+  sendBtn.disabled = true;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Hide empty state
+  document.getElementById('empty-state')?.remove();
+
+  // Add user message
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  // Show typing
+  const typingEl = appendTyping();
+
+  try {
+    // Build context from Supabase
+    const context = await buildContext();
+
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: chatHistory,
+        context,
+        userId: userProfile?.id,
+        userName: userProfile?.display_name,
+      })
+    });
+
+    typingEl.remove();
+
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const reply = data.message || 'Something went wrong. Please try again.';
+
+    appendMessage('assistant', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+
+  } catch (err) {
+    typingEl.remove();
+    appendMessage('assistant', 'Connection error. Please try again.');
+    console.error(err);
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+async function buildContext() {
+  if (!userProfile?.id) return {};
+  const uid = userProfile.id;
+  const tok = session.token;
+
+  const [aop, quarterly, receipts, parking] = await Promise.all([
+    sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=*&order=created_at.desc&limit=1`, tok),
+    sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=*&order=created_at.desc&limit=1`, tok),
+    sbQuery('session_receipts', `user_id=eq.${uid}&select=*&order=session_date.desc&limit=10`, tok),
+    sbQuery('parking_lot', `user_id=eq.${uid}&status=eq.open&select=item,due_date,why&order=created_at.desc&limit=5`, tok),
+  ]);
+
+  return {
+    annual_operating_picture: aop?.[0] || null,
+    quarterly_dashboard: quarterly?.[0] || null,
+    recent_sessions: receipts || [],
+    open_parking_lot: parking || [],
+    user_name: userProfile?.display_name || 'there',
+  };
+}
+
+function appendMessage(role, text) {
+  const msgs = document.getElementById('messages');
+  const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-bubble">${esc(text)}</div>
+    <div class="msg-time">${time}</div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function appendTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function logout() {
+  localStorage.clear();
+  window.location.href = 'index.html';
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function formatDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+</script>
+<script src="app.js"></script>
+</body>
+</html>
