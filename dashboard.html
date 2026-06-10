@@ -468,6 +468,24 @@ async function sbQuery(table, params = '') {
   return res.json();
 }
 
+async function sbInsert(table, payload) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error('Supabase insert failed: ' + err);
+  }
+  return res.json();
+}
+
 async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email&limit=1`);
   if (rows && rows.length > 0) {
@@ -538,6 +556,92 @@ function sendChip(el) { document.getElementById('chat-input').value = el.textCon
 function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 
+// ─── RECEIPT HANDLING ────────────────────────────────────────────────────────
+
+// Generate receipt number: NSR-YYYYMMDD-001
+async function generateReceiptNumber() {
+  const today = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  });
+  // Convert MM/DD/YYYY to YYYYMMDD
+  const [m, d, y] = today.split('/');
+  const dateStr = y + m + d;
+
+  // Query highest sequence for today
+  const rows = await sbQuery(
+    'session_receipts',
+    `receipt_number=like.NSR-${dateStr}-%25&select=receipt_number&order=receipt_number.desc&limit=1`
+  );
+  let seq = 1;
+  if (rows && rows.length > 0 && rows[0].receipt_number) {
+    const parts = rows[0].receipt_number.split('-');
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
+  }
+  return `NSR-${dateStr}-${String(seq).padStart(3, '0')}`;
+}
+
+// Write receipt to Supabase — called by processReceiptBlock
+async function writeSessionReceipt(fields) {
+  if (!userProfile?.id) throw new Error('No user profile');
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+  const receiptNumber = await generateReceiptNumber();
+
+  const payload = {
+    user_id: userProfile.id,
+    session_date: today,
+    room_id: 'north-star-room',
+    receipt_number: receiptNumber,
+    session_scope: fields.session_scope || null,
+    bronze_task: fields.bronze_task || null,
+    bronze_status: fields.bronze_status || null,
+    completion_status: fields.completion_status || 'bronze',
+    trigger_context: fields.trigger_context || 'daily_work',
+    outcome_type: fields.outcome_type || null,
+    thread_tag: fields.thread_tag || null,
+    rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff',
+    carried_forward: fields.carried_forward || null
+  };
+
+  const rows = await sbInsert('session_receipts', payload);
+  return { receiptNumber, row: rows?.[0] || null };
+}
+
+// Detect %%RECEIPT%%{...}%%END_RECEIPT%% in assistant response.
+// Returns { displayText, receiptNumber } — receiptNumber is null if no block found or write fails.
+async function processReceiptBlock(text) {
+  const start = text.indexOf('%%RECEIPT%%');
+  const end = text.indexOf('%%END_RECEIPT%%');
+
+  if (start === -1 || end === -1 || end < start) {
+    return { displayText: text, receiptNumber: null };
+  }
+
+  const jsonStr = text.slice(start + '%%RECEIPT%%'.length, end).trim();
+  // Remove the block from display text
+  let displayText = (text.slice(0, start) + text.slice(end + '%%END_RECEIPT%%'.length)).trim();
+
+  let receiptNumber = null;
+  try {
+    const fields = JSON.parse(jsonStr);
+    const result = await writeSessionReceipt(fields);
+    receiptNumber = result.receiptNumber;
+    // Replace the placeholder close line with the real receipt number
+    displayText = displayText.replace(
+      /Session closed\..*$/m,
+      `Session closed. ${receiptNumber}`
+    );
+  } catch (err) {
+    console.error('Receipt write failed:', err);
+    // Leave display text as-is, no receipt number surfaced
+  }
+
+  return { displayText, receiptNumber };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -559,9 +663,18 @@ async function sendMessage() {
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
-    const reply = data.message || 'Something went wrong.';
-    appendMessage('assistant', reply);
-    chatHistory.push({ role: 'assistant', content: reply });
+    const rawReply = data.message || 'Something went wrong.';
+
+    // Process receipt block if present
+    const { displayText, receiptNumber } = await processReceiptBlock(rawReply);
+
+    appendMessage('assistant', displayText);
+    // Store cleaned text in history (no receipt block)
+    chatHistory.push({ role: 'assistant', content: displayText });
+
+    if (receiptNumber) {
+      console.log('Receipt written:', receiptNumber);
+    }
   } catch (err) {
     typingEl.remove();
     appendMessage('assistant', 'Connection error. Please try again.');
@@ -590,44 +703,28 @@ async function buildContext() {
 }
 
 function renderMarkdown(text) {
-  // Step 1: escape HTML
   let out = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Step 2: headers
   out = out
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-  // Step 3: bold / italic
   out = out
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Step 4: horizontal rules
   out = out.replace(/^---$/gm, '<hr>');
-
-  // Step 5: numbered list items — preserve number as value attribute
   out = out.replace(/^(\d+)\.\s+(.+)$/gm, '<li value="$1">$2</li>');
-
-  // Step 6: bullet list items
   out = out.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
-
-  // Step 7: wrap consecutive <li> blocks in <ol> or <ul>
-  // Numbered items have value="N", bullet items don't
   out = out.replace(/(<li[^>]*>.*<\/li>\n?)+/g, function(block) {
-    if (block.includes('value=')) {
-      return '<ol>' + block + '</ol>';
-    } else {
-      return '<ul>' + block + '</ul>';
-    }
+    return block.includes('value=') ? '<ol>' + block + '</ol>' : '<ul>' + block + '</ul>';
   });
 
-  // Step 8: paragraphs
   out = out
     .replace(/\n\n+/g, '</p><p>')
     .replace(/\n/g, '<br>')
