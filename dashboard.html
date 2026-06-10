@@ -250,7 +250,6 @@
       border-bottom-left-radius: 4px;
       width: 100%;
     }
-    /* Markdown inside assistant bubbles */
     .msg.assistant .msg-bubble p { margin: 0 0 10px; }
     .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
     .msg.assistant .msg-bubble strong { color: var(--text); font-weight: 700; }
@@ -269,7 +268,6 @@
     .msg.assistant .msg-bubble blockquote { border-left: 3px solid var(--gold); margin: 8px 0; padding: 6px 12px; color: var(--muted); font-style: italic; }
     .msg-time { font-size: 10px; color: var(--muted); padding: 0 2px; }
 
-    /* Copy button */
     .msg-actions { display: flex; align-items: center; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
     .msg.assistant:hover .msg-actions { opacity: 1; }
     .copy-btn {
@@ -282,14 +280,12 @@
     .copy-btn:hover { color: var(--text); background: var(--surface2); }
     .copy-btn.copied { color: #16a34a; }
 
-    /* Typing */
     .typing-indicator { display: flex; gap: 4px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; border-bottom-left-radius: 4px; width: fit-content; }
     .typing-dot { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: typing 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes typing { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
 
-    /* Chat input */
     .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; }
     .chat-input-wrap {
       width: 100%; max-width: 660px;
@@ -316,6 +312,104 @@
     .badge-gold { background: #fdf8ee; color: var(--gold); }
     .badge-green { background: #f0fdf4; color: #16a34a; }
     .badge-gray { background: #f5f5f5; color: #888; }
+
+    /* ── ACCOUNT VIEW ─────────────────────────────────────────── */
+    .account-wrap {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 24px 60px;
+    }
+    .account-inner { width: 100%; max-width: 560px; }
+    .account-title {
+      font-size: 22px; font-weight: 700; color: var(--text);
+      margin-bottom: 4px;
+    }
+    .account-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+
+    .account-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .account-section-header {
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .account-section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--muted);
+    }
+
+    .account-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .account-row:last-child { border-bottom: none; }
+    .account-row-label {
+      font-size: 12px; color: var(--muted); margin-bottom: 3px;
+      text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;
+    }
+    .account-row-value {
+      font-size: 14px; font-weight: 500; color: var(--text);
+    }
+    .account-row-value.muted { color: var(--muted); font-weight: 400; font-style: italic; }
+
+    /* Documents list */
+    .doc-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: var(--gold-bg);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gold);
+    }
+    .doc-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .doc-name { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
+    .doc-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .doc-empty { padding: 28px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* Help + danger zone */
+    .help-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px;
+      font-size: 14px; font-weight: 500; color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+    .help-link:last-child { border-bottom: none; }
+    .help-link:hover { background: var(--surface2); }
+    .help-link svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .help-link .link-arrow { margin-left: auto; color: var(--muted); }
+
+    .logout-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 13px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px; font-weight: 500;
+      color: #dc2626;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: inherit;
+    }
+    .logout-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .logout-btn:hover { background: #fff0f0; border-color: #fca5a5; }
 
     /* Loading */
     .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 999; }
@@ -362,11 +456,11 @@
   </div>
 
   <div class="sidebar-bottom">
-    <div class="nav-btn" onclick="logout()">
-      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <div class="tooltip">Sign out</div>
+    <div class="nav-btn" id="nav-account" onclick="switchView('account')">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <div class="tooltip">Account</div>
     </div>
-    <div class="avatar" id="user-avatar">?</div>
+    <div class="avatar" id="user-avatar" onclick="switchView('account')">?</div>
   </div>
 </nav>
 
@@ -386,7 +480,6 @@
         </div>
         <div class="home-sub">Use one of your common prompts below, or start with your own.</div>
 
-        <!-- Context strip — loads from Supabase -->
         <div class="context-strip" id="ctx-strip" style="display:none;">
           <div class="ctx-card" id="ctx-pro">
             <div class="ctx-label">Professional Focus</div>
@@ -403,7 +496,6 @@
           </div>
         </div>
 
-        <!-- Prompt chips -->
         <div class="chips-grid">
           <div class="chip-card" onclick="sendFromChip('Give me my brief')">
             <div class="chip-card-text">Give me my North Star brief for today</div>
@@ -423,7 +515,6 @@
           </div>
         </div>
 
-        <!-- Home input box -->
         <div class="home-input-wrap">
           <textarea class="home-input" id="home-input" placeholder="Ask whatever you want…" rows="2"
             onkeydown="handleHomeKey(event)" oninput="autoResize(this)"></textarea>
@@ -448,9 +539,7 @@
           <div class="chat-header-sub">Chief of Staff — direct line ✓</div>
         </div>
       </div>
-      <div class="messages" id="messages">
-        <!-- populated by JS -->
-      </div>
+      <div class="messages" id="messages"></div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1"
@@ -472,6 +561,70 @@
         <div class="home-greeting" style="font-size:22px; margin-bottom:4px;">Session History</div>
         <div class="home-sub" style="margin-bottom:24px;">Your recent sessions</div>
         <div id="history-list"><div style="color:var(--muted);text-align:center;padding:40px;">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT VIEW -->
+  <div class="view" id="view-account">
+    <div class="account-wrap">
+      <div class="account-inner">
+
+        <div class="account-title">Account</div>
+        <div class="account-sub">Your profile and settings</div>
+
+        <!-- Profile info -->
+        <div class="account-section">
+          <div class="account-section-header">
+            <div class="account-section-title">Profile</div>
+          </div>
+          <div class="account-row">
+            <div>
+              <div class="account-row-label">Name</div>
+              <div class="account-row-value" id="acct-name">—</div>
+            </div>
+          </div>
+          <div class="account-row">
+            <div>
+              <div class="account-row-label">Email</div>
+              <div class="account-row-value" id="acct-email">—</div>
+            </div>
+          </div>
+          <div class="account-row">
+            <div>
+              <div class="account-row-label">Plan</div>
+              <div class="account-row-value">Chief of Staff</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Uploaded documents -->
+        <div class="account-section">
+          <div class="account-section-header">
+            <div class="account-section-title">Your Documents</div>
+          </div>
+          <div id="acct-docs-list">
+            <div class="doc-empty">Loading documents…</div>
+          </div>
+        </div>
+
+        <!-- Help & Support -->
+        <div class="account-section">
+          <div class="account-section-header">
+            <div class="account-section-title">Help &amp; Support</div>
+          </div>
+          <a class="help-link" href="mailto:alzay@covetedconsultant.com?subject=North Star OS — Support">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Get help
+            <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+          <div class="help-link" onclick="logout()">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign out
+            <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -521,6 +674,9 @@ async function loadProfile(email, userId) {
   const firstName = name.split(' ')[0];
   document.getElementById('user-first-name-home').textContent = firstName;
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
+  // Populate account view
+  document.getElementById('acct-name').textContent = userProfile?.display_name || '—';
+  document.getElementById('acct-email').textContent = userProfile?.email || email;
 }
 
 async function loadHomeContext() {
@@ -542,9 +698,9 @@ async function loadHomeContext() {
     document.getElementById('ctx-last-date').textContent = formatDate(last.session_date);
     document.getElementById('ctx-last').style.display = 'block';
   }
-  // load history too
   const allReceipts = await sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,bronze_status,completion_status&order=session_date.desc&limit=10`);
   loadHistory(allReceipts || []);
+  loadDocuments(uid);
 }
 
 function loadHistory(receipts) {
@@ -561,8 +717,15 @@ function loadHistory(receipts) {
   `).join('');
 }
 
+async function loadDocuments(uid) {
+  const el = document.getElementById('acct-docs-list');
+  // No documents table yet — show informational placeholder
+  // When file storage is added, replace this with a real Supabase query
+  el.innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>';
+}
+
 function switchView(name) {
-  const views = ['home', 'chat', 'history'];
+  const views = ['home', 'chat', 'history', 'account'];
   views.forEach(v => {
     document.getElementById('view-' + v).classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v);
