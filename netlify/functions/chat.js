@@ -68,13 +68,15 @@ function csReceiptShouldLoad(messages) {
   const closeSignals = [
     'that\'s it', 'that is it', 'we\'re done', 'we are done',
     'close it out', 'close the session', 'session closed',
-    'close the meeting', 'end the meeting', 'close out',
-    'wrap up', 'wrap it up',
+    'close the meeting', 'close the chat', 'end the meeting', 'end the session',
+    'close out', 'wrap up', 'wrap it up',
     'i\'m done', 'i am done', 'all done',
     'that\'s all', 'that is all', 'nope that\'s all', 'nope, that\'s all',
     'thanks, that\'s all', 'that\'s all for now', 'nothing else',
-    'good to go', 'let\'s close', 'you can close',
-    'nothing more', 'we\'re good', 'we are good'
+    'good to go', 'let\'s close', 'you can close', 'please close',
+    'nothing more', 'we\'re good', 'we are good',
+    'i\'ll send that', 'i will send that', 'send it', 'i\'ll do it',
+    'close it', 'done for today', 'that does it'
   ];
   const userMessages = messages.filter(m => m.role === 'user');
   if (userMessages.length === 0) return false;
