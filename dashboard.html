@@ -379,7 +379,7 @@
     .doc-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .doc-empty { padding: 28px 20px; text-align: center; color: var(--muted); font-size: 13px; }
 
-    /* Help + danger zone */
+    /* Help + support */
     .help-link {
       display: flex; align-items: center; gap: 10px;
       padding: 14px 20px;
@@ -393,23 +393,6 @@
     .help-link:hover { background: var(--surface2); }
     .help-link svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
     .help-link .link-arrow { margin-left: auto; color: var(--muted); }
-
-    .logout-btn {
-      width: 100%;
-      margin-top: 24px;
-      padding: 13px 20px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 14px; font-weight: 500;
-      color: #dc2626;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      font-family: inherit;
-    }
-    .logout-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .logout-btn:hover { background: #fff0f0; border-color: #fca5a5; }
 
     /* Loading */
     .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 999; }
@@ -613,7 +596,7 @@
           <div class="account-section-header">
             <div class="account-section-title">Help &amp; Support</div>
           </div>
-          <a class="help-link" href="mailto:alzay@covetedconsultant.com?subject=North Star OS — Support">
+          <a class="help-link" href="mailto:support@covetedconsultant.com?subject=North Star OS — Support">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Get help
             <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
@@ -674,7 +657,6 @@ async function loadProfile(email, userId) {
   const firstName = name.split(' ')[0];
   document.getElementById('user-first-name-home').textContent = firstName;
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
-  // Populate account view
   document.getElementById('acct-name').textContent = userProfile?.display_name || '—';
   document.getElementById('acct-email').textContent = userProfile?.email || email;
 }
@@ -719,8 +701,6 @@ function loadHistory(receipts) {
 
 async function loadDocuments(uid) {
   const el = document.getElementById('acct-docs-list');
-  // No documents table yet — show informational placeholder
-  // When file storage is added, replace this with a real Supabase query
   el.innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>';
 }
 
@@ -755,8 +735,6 @@ function sendFromHome() {
 function handleHomeKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromHome(); } }
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-
-// ── RECEIPT HANDLING ──────────────────────────────────────────────────────────
 
 async function generateReceiptNumber() {
   const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -802,8 +780,6 @@ async function processReceiptBlock(text) {
   } catch (err) { console.error('Receipt write failed:', err); }
   return { displayText, receiptNumber };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
