@@ -363,18 +363,18 @@
 <body>
 
 <div class="loading-overlay" id="loading">
-  <div class="loading-logo">★</div>
+  <div class="loading-logo">&#9733;</div>
   <div class="loading-spinner"></div>
-  <div class="loading-text">Loading your operating system…</div>
+  <div class="loading-text">Loading your operating system&hellip;</div>
 </div>
 
 <nav class="sidebar">
-  <div class="sidebar-logo">★</div>
-  <div class="nav-btn active" id="nav-dash" onclick="switchView('dash')">⊞<div class="tooltip">Dashboard</div></div>
-  <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">✦<div class="tooltip">Daily Brief</div></div>
-  <div class="nav-btn" id="nav-history" onclick="switchView('history')">◷<div class="tooltip">Session History</div></div>
+  <div class="sidebar-logo">&#9733;</div>
+  <div class="nav-btn active" id="nav-dash" onclick="switchView('dash')">&#10782;<div class="tooltip">Dashboard</div></div>
+  <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">&#10022;<div class="tooltip">Daily Brief</div></div>
+  <div class="nav-btn" id="nav-history" onclick="switchView('history')">&#9711;<div class="tooltip">Session History</div></div>
   <div class="sidebar-bottom">
-    <div class="nav-btn" onclick="logout()">⎋<div class="tooltip">Sign out</div></div>
+    <div class="nav-btn" onclick="logout()">&#9099;<div class="tooltip">Sign out</div></div>
     <div class="avatar" id="user-avatar">?</div>
   </div>
 </nav>
@@ -389,7 +389,7 @@
       <div class="gold-rule"></div>
       <div class="cards-grid" id="dash-cards">
         <div class="card full" style="text-align:center;padding:40px;color:var(--muted);">
-          <div style="font-size:24px;margin-bottom:12px;">⋯</div>Loading your data…
+          <div style="font-size:24px;margin-bottom:12px;">&#8943;</div>Loading your data&hellip;
         </div>
       </div>
     </div>
@@ -398,15 +398,15 @@
   <div class="view" id="view-chat">
     <div class="chat-wrap">
       <div class="chat-header">
-        <div class="chat-header-icon">✦</div>
+        <div class="chat-header-icon">&#10022;</div>
         <div>
           <div class="chat-header-title">Daily Brief</div>
-          <div class="chat-header-sub">Chief of Staff — direct line ✓</div>
+          <div class="chat-header-sub">Chief of Staff &mdash; direct line &#10003;</div>
         </div>
       </div>
       <div class="messages" id="messages">
         <div class="empty-chat" id="empty-state">
-          <div class="empty-chat-icon">✦</div>
+          <div class="empty-chat-icon">&#10022;</div>
           <div class="empty-chat-title">Your Chief of Staff is ready</div>
           <div class="empty-chat-sub">Ask anything about your operating picture, or start with one of these:</div>
           <div class="prompt-chips">
@@ -419,9 +419,9 @@
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1"
+          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff&hellip;" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">&#10148;</button>
         </div>
       </div>
     </div>
@@ -434,7 +434,7 @@
         <div class="dash-date">Your recent sessions</div>
       </div>
       <div class="gold-rule"></div>
-      <div id="history-list"><div style="text-align:center;padding:40px;color:var(--muted);">Loading…</div></div>
+      <div id="history-list"><div style="text-align:center;padding:40px;color:var(--muted);">Loading&hellip;</div></div>
     </div>
   </div>
 </main>
@@ -509,7 +509,7 @@ function renderDashboard(aop, quarterly, receipts) {
     <div class="card"><div class="card-label">Personal Focus</div><div class="card-value">${esc(quarterly.quarterly_focus_personal||'—')}</div>${quarterly.quarterly_watch_out?`<div class="card-sub">Watch out: ${esc(quarterly.quarterly_watch_out)}</div>`:''}</div>` : ''}
     ${aop ? `<div class="card full"><div class="card-label">Annual Arrival</div><div class="card-value">${esc(aop.annual_arrival||'—')}</div>${aop.mission_statement?`<div class="card-sub" style="margin-top:10px;font-size:13px;color:#aaa;">${esc(aop.mission_statement)}</div>`:''}</div>` : ''}
     ${last ? `<div class="card full"><div class="card-label">Most Recent Session</div><div class="card-value" style="display:flex;align-items:center;gap:10px;">${esc(last.bronze_task||'—')}${last.completion_status?`<span class="badge badge-${last.completion_status==='gold'?'gold':last.completion_status==='silver'?'gray':'green'}">${last.completion_status}</span>`:''}</div><div class="card-sub">${formatDate(last.session_date)}</div></div>` : ''}
-    ${receipts.length===0 ? `<div class="card full" style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:24px;margin-bottom:12px;">✦</div>No sessions yet. Open the Daily Brief to get started.</div>` : ''}
+    ${receipts.length===0 ? `<div class="card full" style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:24px;margin-bottom:12px;">&#10022;</div>No sessions yet. Open the Daily Brief to get started.</div>` : ''}
   `;
 }
 
@@ -590,33 +590,50 @@ async function buildContext() {
 }
 
 function renderMarkdown(text) {
-  return text
-    // Escape HTML first
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    // Headers
+  // Step 1: escape HTML
+  let out = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Step 2: headers
+  out = out
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold and italic
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  // Step 3: bold / italic
+  out = out
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Horizontal rules
-    .replace(/^---$/gm, '<hr>')
-    // Numbered lists
-    .replace(/^(\d+)\.\s+(.+)$/gm, '<li data-n="$1">$2</li>')
-    // Bullet lists
-    .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
-    // Wrap consecutive <li> in <ul> or <ol>
-    .replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => {
-      return m.includes('data-n') ? `<ol>${m.replace(/ data-n="\d+"/g,'')}</ol>` : `<ul>${m}</ul>`;
-    })
-    // Paragraphs — double newlines
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Step 4: horizontal rules
+  out = out.replace(/^---$/gm, '<hr>');
+
+  // Step 5: numbered list items — preserve number as value attribute
+  out = out.replace(/^(\d+)\.\s+(.+)$/gm, '<li value="$1">$2</li>');
+
+  // Step 6: bullet list items
+  out = out.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+
+  // Step 7: wrap consecutive <li> blocks in <ol> or <ul>
+  // Numbered items have value="N", bullet items don't
+  out = out.replace(/(<li[^>]*>.*<\/li>\n?)+/g, function(block) {
+    if (block.includes('value=')) {
+      return '<ol>' + block + '</ol>';
+    } else {
+      return '<ul>' + block + '</ul>';
+    }
+  });
+
+  // Step 8: paragraphs
+  out = out
     .replace(/\n\n+/g, '</p><p>')
-    // Single newlines
     .replace(/\n/g, '<br>')
-    // Wrap in paragraph
     .replace(/^(.+)$/, '<p>$1</p>');
+
+  return out;
 }
 
 function appendMessage(role, text) {
