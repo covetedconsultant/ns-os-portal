@@ -253,6 +253,34 @@
       font-style: italic;
     }
     .msg-time { font-size: 10px; color: var(--muted); padding: 0 4px; }
+
+    /* COPY BUTTON */
+    .msg-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .msg.assistant:hover .msg-actions { opacity: 1; }
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 3px 5px;
+      border-radius: 5px;
+      font-size: 13px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .copy-btn:hover { color: var(--text); background: #2a2a2a; }
+    .copy-btn.copied { color: #6dbf6d; }
+
     .typing-indicator {
       display: flex; gap: 4px;
       padding: 14px 18px;
@@ -556,7 +584,7 @@ function sendChip(el) { document.getElementById('chat-input').value = el.textCon
 function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 
-// ─── RECEIPT HANDLING ────────────────────────────────────────────────────────
+// ─── RECEIPT HANDLING ──────────────────────────────────────────────────────────────────────────────
 
 // Generate receipt number: NSR-YYYYMMDD-001
 async function generateReceiptNumber() {
@@ -733,13 +761,67 @@ function renderMarkdown(text) {
   return out;
 }
 
+// Get plain text from a rendered assistant bubble (strips HTML)
+function getBubblePlainText(bubbleEl) {
+  return bubbleEl.innerText || bubbleEl.textContent || '';
+}
+
 function appendMessage(role, text) {
   const msgs = document.getElementById('messages');
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   const div = document.createElement('div');
   div.className = `msg ${role}`;
+
   if (role === 'assistant') {
-    div.innerHTML = `<div class="msg-bubble">${renderMarkdown(text)}</div><div class="msg-time">${time}</div>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = renderMarkdown(text);
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = time;
+
+    // Copy button row — clipboard icon only
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'msg-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.title = 'Copy to clipboard';
+    copyBtn.innerHTML = '&#128203;'; // 📋 clipboard
+    copyBtn.addEventListener('click', () => {
+      const plainText = getBubblePlainText(bubble);
+      navigator.clipboard.writeText(plainText).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = '&#10003;'; // ✓
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = '&#128203;';
+        }, 1500);
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = plainText;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = '&#10003;';
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = '&#128203;';
+        }, 1500);
+      });
+    });
+
+    actionsEl.appendChild(copyBtn);
+
+    div.appendChild(bubble);
+    div.appendChild(actionsEl);
+    div.appendChild(timeEl);
   } else {
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
@@ -750,6 +832,7 @@ function appendMessage(role, text) {
     div.appendChild(bubble);
     div.appendChild(timeEl);
   }
+
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
