@@ -33,11 +33,7 @@ function userSelectedOptionB(messages) {
 }
 
 // CS-9 trigger: user has confirmed a numbered offer from CS-1 (Option B) or Option A.
-// Signals: user replies with a single number 1-3, or explicitly confirms an offer.
-// Only fires once CS-1 or Option A has already been active (i.e. Option B was selected
-// or the conversation has reached the offer-presentation stage).
 function cs9ShouldLoad(messages) {
-  // CS-9 only relevant if Option B was selected OR assistant has presented numbered offers
   const assistantPresentedOffers = messages.some(msg =>
     msg.role === 'assistant' &&
     (
@@ -48,7 +44,6 @@ function cs9ShouldLoad(messages) {
   );
   if (!assistantPresentedOffers) return false;
 
-  // Look for user confirming a numbered offer after the assistant presented them
   const offerPresentedIdx = messages.findIndex(msg =>
     msg.role === 'assistant' &&
     (
@@ -58,7 +53,6 @@ function cs9ShouldLoad(messages) {
     )
   );
 
-  // Check messages after the offer was presented
   const afterOffers = messages.slice(offerPresentedIdx + 1);
   const confirmSignals = ['1', '2', '3', 'option 1', 'option 2', 'option 3', 'yes', 'let\'s do that', 'that one', 'go with'];
   for (const msg of afterOffers) {
@@ -70,17 +64,18 @@ function cs9ShouldLoad(messages) {
 }
 
 // CS-Receipt trigger: session is winding down.
-// Signals: user or context indicates they are done for the session.
 function csReceiptShouldLoad(messages) {
   const closeSignals = [
     'that\'s it', 'that is it', 'we\'re done', 'we are done',
     'close it out', 'close the session', 'session closed',
-    'close out', 'wrap up', 'wrap it up',
+    'close the meeting', 'end the meeting', 'close out',
+    'wrap up', 'wrap it up',
     'i\'m done', 'i am done', 'all done',
+    'that\'s all', 'that is all', 'nope that\'s all', 'nope, that\'s all',
     'thanks, that\'s all', 'that\'s all for now', 'nothing else',
-    'good to go', 'let\'s close'
+    'good to go', 'let\'s close', 'you can close',
+    'nothing more', 'we\'re good', 'we are good'
   ];
-  // Only look at the most recent user message — avoid false positives from mid-session
   const userMessages = messages.filter(m => m.role === 'user');
   if (userMessages.length === 0) return false;
   const lastUserMsg = userMessages[userMessages.length - 1].content.toLowerCase().trim();
@@ -119,7 +114,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // CS-9: load when user confirms a numbered offer (after CS-1 or Option A presents them)
+    // CS-9: load when user confirms a numbered offer
     if (cs9ShouldLoad(messages)) {
       const cs9Prompt = await getPrompt('cs-9');
       if (cs9Prompt) {
@@ -183,9 +178,19 @@ function buildContextString(ctx) {
   if (!ctx) return 'No context available.';
   const lines = [];
 
+  // Always inject today's date so protocols can reference it
+  const todayET = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  lines.push('TODAY\'S DATE: ' + todayET);
+
   if (ctx.annual_operating_picture) {
     const a = ctx.annual_operating_picture;
-    lines.push('=== ANNUAL OPERATING PICTURE ===');
+    lines.push('\n=== ANNUAL OPERATING PICTURE ===');
     if (a.annual_arrival) lines.push('Annual Arrival: ' + a.annual_arrival);
     if (a.mission_statement) lines.push('Mission: ' + a.mission_statement);
     if (a.annual_picture_rendered) lines.push('Annual Picture: ' + a.annual_picture_rendered);
