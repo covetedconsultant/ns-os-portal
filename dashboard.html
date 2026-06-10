@@ -8,14 +8,17 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #1a1a1a;
-      --surface: #242424;
-      --border: #333;
+      --bg: #eeeeee;
+      --surface: #ffffff;
+      --surface2: #f7f7f7;
+      --border: #e0e0e0;
       --gold: #B8860B;
       --gold-light: #D4A017;
-      --text: #e0e0e0;
-      --muted: #888;
-      --sidebar-w: 64px;
+      --gold-bg: #fdf8ee;
+      --text: #1a1a1a;
+      --text2: #555;
+      --muted: #999;
+      --sidebar-w: 60px;
     }
 
     body {
@@ -27,174 +30,209 @@
       overflow: hidden;
     }
 
-    /* SIDEBAR */
+    /* ── SIDEBAR ─────────────────────────────────────────────── */
     .sidebar {
       width: var(--sidebar-w);
-      background: #111;
+      background: var(--surface);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px 0;
-      gap: 8px;
+      padding: 18px 0;
+      gap: 6px;
       flex-shrink: 0;
       border-right: 1px solid var(--border);
     }
     .sidebar-logo {
-      width: 36px;
-      height: 36px;
-      background: var(--gold);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      color: #fff;
-      margin-bottom: 16px;
+      width: 36px; height: 36px;
+      background: var(--text);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
     }
+    .sidebar-logo svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; }
     .nav-btn {
-      width: 40px;
-      height: 40px;
+      width: 38px; height: 38px;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      font-size: 18px;
       color: var(--muted);
       transition: all 0.15s;
       position: relative;
     }
-    .nav-btn:hover { background: #222; color: var(--text); }
-    .nav-btn.active { background: #2a2200; color: var(--gold); }
+    .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.active { background: var(--gold-bg); color: var(--gold); }
     .nav-btn .tooltip {
       position: absolute;
-      left: 52px;
-      background: #111;
-      border: 1px solid var(--border);
+      left: 48px;
+      background: var(--text);
+      color: #fff;
       border-radius: 6px;
       padding: 4px 10px;
       font-size: 11px;
-      color: var(--text);
       white-space: nowrap;
       display: none;
       z-index: 100;
+      pointer-events: none;
     }
     .nav-btn:hover .tooltip { display: block; }
-    .sidebar-bottom {
-      margin-top: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
+    .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar {
-      width: 32px;
-      height: 32px;
+      width: 32px; height: 32px;
       border-radius: 50%;
       background: var(--gold);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
       cursor: pointer;
     }
 
-    /* MAIN */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* VIEWS */
+    /* ── MAIN ────────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
     .view.active { display: flex; }
 
-    /* DASHBOARD VIEW */
-    .dash-content {
+    /* ── HOME VIEW ───────────────────────────────────────────── */
+    .home-wrap {
       flex: 1;
       overflow-y: auto;
-      padding: 32px 32px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 24px 40px;
     }
-    .dash-header { margin-bottom: 28px; }
-    .dash-greeting { font-size: 26px; font-weight: 700; color: #fff; }
-    .dash-greeting span { color: var(--gold); }
-    .dash-date { font-size: 13px; color: var(--muted); margin-top: 4px; }
-    .gold-rule {
-      height: 2px;
-      background: linear-gradient(90deg, var(--gold), transparent);
-      margin: 20px 0;
-      border-radius: 2px;
+    .home-inner { width: 100%; max-width: 680px; }
+    .home-greeting {
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 6px;
+      color: var(--text);
     }
-    .cards-grid {
+    .home-greeting .name { color: var(--gold); }
+    .home-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+    /* Prompt chips */
+    .chips-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
     }
-    .card {
+    .chip-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 18px 20px;
+      padding: 16px 18px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
-    .card.full { grid-column: 1 / -1; }
-    .card-label {
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .card-value { font-size: 15px; font-weight: 600; color: #fff; line-height: 1.5; }
-    .card-sub { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-    .badge-gold { background: #2a2200; color: var(--gold); }
-    .badge-green { background: #1a2e1a; color: #6dbf6d; }
-    .badge-gray { background: #2a2a2a; color: #aaa; }
-    .recent-list { list-style: none; }
-    .recent-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #2a2a2a; }
-    .recent-item:last-child { border-bottom: none; }
-    .recent-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-    .recent-text { font-size: 13px; color: var(--text); line-height: 1.4; }
-    .recent-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .chip-card:hover { border-color: var(--gold); box-shadow: 0 2px 8px rgba(184,134,11,0.08); }
+    .chip-card-text { font-size: 13px; color: var(--text2); line-height: 1.4; }
+    .chip-card svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* CHAT VIEW */
+    /* Home input */
+    .home-input-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px 12px;
+      margin-top: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      transition: border 0.15s;
+    }
+    .home-input-wrap:focus-within { border-color: var(--gold); }
+    .home-input {
+      width: 100%;
+      background: transparent;
+      border: none; outline: none;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      resize: none;
+      line-height: 1.5;
+      min-height: 44px;
+      max-height: 120px;
+    }
+    .home-input::placeholder { color: var(--muted); }
+    .home-input-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .send-btn {
+      width: 34px; height: 34px;
+      background: var(--gold);
+      border: none; border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .send-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .send-btn:hover { background: var(--gold-light); }
+    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* context cards strip */
+    .context-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .ctx-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .ctx-card.full { grid-column: 1 / -1; }
+    .ctx-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
+    .ctx-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+    .ctx-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* ── CHAT VIEW ───────────────────────────────────────────── */
     .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .chat-header {
-      padding: 16px 24px;
+      padding: 14px 24px;
       border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      background: var(--surface);
+      display: flex; align-items: center; gap: 12px;
     }
     .chat-header-icon {
-      width: 32px; height: 32px;
-      background: #2a2200;
+      width: 30px; height: 30px;
+      background: var(--gold-bg);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
+      color: var(--gold); font-size: 15px;
     }
-    .chat-header-title { font-size: 15px; font-weight: 600; color: #fff; }
-    .chat-header-sub { font-size: 12px; color: var(--muted); }
+    .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .chat-header-sub { font-size: 11px; color: var(--muted); }
+
     .messages {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 32px 24px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
+      align-items: center;
     }
-    .msg { max-width: 80%; display: flex; flex-direction: column; gap: 4px; }
-    .msg.user { align-self: flex-end; align-items: flex-end; }
-    .msg.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg {
+      width: 100%;
+      max-width: 660px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .msg.user { align-items: flex-end; }
+    .msg.assistant { align-items: flex-start; }
+
     .msg-bubble {
-      padding: 12px 16px;
-      border-radius: 12px;
+      padding: 11px 15px;
+      border-radius: 14px;
       font-size: 14px;
       line-height: 1.7;
     }
@@ -203,268 +241,241 @@
       color: #fff;
       border-bottom-right-radius: 4px;
       white-space: pre-wrap;
+      max-width: 80%;
     }
     .msg.assistant .msg-bubble {
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--text);
       border-bottom-left-radius: 4px;
+      width: 100%;
     }
-    /* Markdown styles inside assistant bubbles */
+    /* Markdown inside assistant bubbles */
     .msg.assistant .msg-bubble p { margin: 0 0 10px; }
     .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
-    .msg.assistant .msg-bubble strong { color: #fff; font-weight: 700; }
-    .msg.assistant .msg-bubble em { font-style: italic; color: #ccc; }
+    .msg.assistant .msg-bubble strong { color: var(--text); font-weight: 700; }
+    .msg.assistant .msg-bubble em { font-style: italic; color: var(--text2); }
     .msg.assistant .msg-bubble h1,
     .msg.assistant .msg-bubble h2,
-    .msg.assistant .msg-bubble h3 {
-      color: #fff;
-      font-weight: 700;
-      margin: 14px 0 6px;
-      line-height: 1.3;
-    }
+    .msg.assistant .msg-bubble h3 { font-weight: 700; margin: 14px 0 6px; line-height: 1.3; color: var(--text); }
     .msg.assistant .msg-bubble h1 { font-size: 17px; }
     .msg.assistant .msg-bubble h2 { font-size: 15px; }
-    .msg.assistant .msg-bubble h3 { font-size: 14px; color: var(--gold); }
+    .msg.assistant .msg-bubble h3 { font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.4px; }
     .msg.assistant .msg-bubble ul,
-    .msg.assistant .msg-bubble ol {
-      padding-left: 20px;
-      margin: 6px 0 10px;
-    }
+    .msg.assistant .msg-bubble ol { padding-left: 20px; margin: 6px 0 10px; }
     .msg.assistant .msg-bubble li { margin-bottom: 4px; }
-    .msg.assistant .msg-bubble hr {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 14px 0;
-    }
-    .msg.assistant .msg-bubble code {
-      background: #1a1a1a;
-      border-radius: 4px;
-      padding: 1px 5px;
-      font-size: 12px;
-      font-family: monospace;
-      color: var(--gold-light);
-    }
-    .msg.assistant .msg-bubble blockquote {
-      border-left: 3px solid var(--gold);
-      margin: 8px 0;
-      padding: 6px 12px;
-      color: var(--muted);
-      font-style: italic;
-    }
-    .msg-time { font-size: 10px; color: var(--muted); padding: 0 4px; }
+    .msg.assistant .msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+    .msg.assistant .msg-bubble code { background: var(--surface2); border-radius: 4px; padding: 1px 5px; font-size: 12px; font-family: monospace; color: var(--gold); }
+    .msg.assistant .msg-bubble blockquote { border-left: 3px solid var(--gold); margin: 8px 0; padding: 6px 12px; color: var(--muted); font-style: italic; }
+    .msg-time { font-size: 10px; color: var(--muted); padding: 0 2px; }
 
-    /* COPY BUTTON */
-    .msg-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 4px;
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
+    /* Copy button */
+    .msg-actions { display: flex; align-items: center; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
     .msg.assistant:hover .msg-actions { opacity: 1; }
     .copy-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      padding: 3px 5px;
-      border-radius: 5px;
-      font-size: 13px;
-      line-height: 1;
-      transition: color 0.15s, background 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 3px 5px; border-radius: 5px;
+      line-height: 1; transition: color 0.15s, background 0.15s;
+      display: flex; align-items: center;
     }
-    .copy-btn:hover { color: var(--text); background: #2a2a2a; }
-    .copy-btn.copied { color: #6dbf6d; }
+    .copy-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .copy-btn:hover { color: var(--text); background: var(--surface2); }
+    .copy-btn.copied { color: #16a34a; }
 
-    .typing-indicator {
-      display: flex; gap: 4px;
-      padding: 14px 18px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      border-bottom-left-radius: 4px;
-      width: fit-content;
-    }
-    .typing-dot {
-      width: 7px; height: 7px;
-      background: var(--muted);
-      border-radius: 50%;
-      animation: typing 1.2s infinite;
-    }
+    /* Typing */
+    .typing-indicator { display: flex; gap: 4px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; border-bottom-left-radius: 4px; width: fit-content; }
+    .typing-dot { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: typing 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing {
-      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-      30% { opacity: 1; transform: translateY(-4px); }
-    }
-    .chat-input-area {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      background: var(--bg);
-    }
+    @keyframes typing { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
+
+    /* Chat input */
+    .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; }
     .chat-input-wrap {
-      display: flex; gap: 10px;
+      width: 100%; max-width: 660px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 14px;
-      align-items: flex-end;
+      border-radius: 14px;
+      padding: 12px 14px 10px;
+      display: flex; flex-direction: column; gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       transition: border 0.15s;
     }
     .chat-input-wrap:focus-within { border-color: var(--gold); }
     .chat-input {
-      flex: 1;
-      background: transparent;
-      border: none; outline: none;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-      resize: none;
-      max-height: 120px;
-      line-height: 1.5;
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 14px; font-family: inherit;
+      resize: none; max-height: 120px; line-height: 1.5;
     }
     .chat-input::placeholder { color: var(--muted); }
-    .send-btn {
-      width: 34px; height: 34px;
-      background: var(--gold);
-      border: none; border-radius: 8px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.15s;
-      font-size: 16px;
-    }
-    .send-btn:hover { background: var(--gold-light); }
-    .send-btn:disabled { background: #444; cursor: not-allowed; }
-    .empty-chat {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      flex: 1; gap: 16px; color: var(--muted);
-    }
-    .empty-chat-icon { font-size: 40px; opacity: 0.4; }
-    .empty-chat-title { font-size: 16px; font-weight: 600; color: #666; }
-    .empty-chat-sub { font-size: 13px; text-align: center; max-width: 280px; line-height: 1.5; }
-    .prompt-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
-    .chip {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 7px 14px;
-      font-size: 12px; color: var(--text);
-      cursor: pointer; transition: all 0.15s;
-    }
-    .chip:hover { border-color: var(--gold); color: var(--gold); }
+    .chat-input-row { display: flex; justify-content: flex-end; }
 
-    /* LOADING */
-    .loading-overlay {
-      position: fixed; inset: 0;
-      background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column; gap: 16px;
-      z-index: 999;
-    }
-    .loading-logo {
-      width: 52px; height: 52px;
-      background: var(--gold); border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px; color: #fff;
-    }
-    .loading-text { font-size: 14px; color: var(--muted); }
-    .loading-spinner {
-      width: 24px; height: 24px;
-      border: 2px solid #333;
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
+    /* History */
+    .hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-gold { background: #fdf8ee; color: var(--gold); }
+    .badge-green { background: #f0fdf4; color: #16a34a; }
+    .badge-gray { background: #f5f5f5; color: #888; }
+
+    /* Loading */
+    .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 999; }
+    .loading-logo { width: 48px; height: 48px; background: var(--text); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .loading-logo svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; }
+    .loading-text { font-size: 13px; color: var(--muted); }
+    .loading-spinner { width: 22px; height: 22px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    ::-webkit-scrollbar { width: 6px; }
+
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   </style>
 </head>
 <body>
 
 <div class="loading-overlay" id="loading">
-  <div class="loading-logo">&#9733;</div>
+  <div class="loading-logo">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+  </div>
   <div class="loading-spinner"></div>
-  <div class="loading-text">Loading your operating system&hellip;</div>
+  <div class="loading-text">Loading your operating system…</div>
 </div>
 
+<!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="sidebar-logo">&#9733;</div>
-  <div class="nav-btn active" id="nav-dash" onclick="switchView('dash')">&#10782;<div class="tooltip">Dashboard</div></div>
-  <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">&#10022;<div class="tooltip">Daily Brief</div></div>
-  <div class="nav-btn" id="nav-history" onclick="switchView('history')">&#9711;<div class="tooltip">Session History</div></div>
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+  </div>
+
+  <div class="nav-btn active" id="nav-home" onclick="switchView('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <div class="tooltip">Home</div>
+  </div>
+
+  <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div class="tooltip">Daily Brief</div>
+  </div>
+
+  <div class="nav-btn" id="nav-history" onclick="switchView('history')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <div class="tooltip">Session History</div>
+  </div>
+
   <div class="sidebar-bottom">
-    <div class="nav-btn" onclick="logout()">&#9099;<div class="tooltip">Sign out</div></div>
+    <div class="nav-btn" onclick="logout()">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <div class="tooltip">Sign out</div>
+    </div>
     <div class="avatar" id="user-avatar">?</div>
   </div>
 </nav>
 
+<!-- MAIN -->
 <main class="main">
-  <div class="view active" id="view-dash">
-    <div class="dash-content">
-      <div class="dash-header">
-        <div class="dash-greeting">Good <span id="time-greeting">morning</span>, <span id="user-first-name" style="color:var(--gold)"></span></div>
-        <div class="dash-date" id="today-date"></div>
-      </div>
-      <div class="gold-rule"></div>
-      <div class="cards-grid" id="dash-cards">
-        <div class="card full" style="text-align:center;padding:40px;color:var(--muted);">
-          <div style="font-size:24px;margin-bottom:12px;">&#8943;</div>Loading your data&hellip;
+
+  <!-- HOME VIEW -->
+  <div class="view active" id="view-home">
+    <div class="home-wrap">
+      <div class="home-inner">
+
+        <div class="home-greeting">
+          Hi there, <span class="name" id="user-first-name-home">—</span>
         </div>
+        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 6px;">
+          What would you like to work on?
+        </div>
+        <div class="home-sub">Use one of your common prompts below, or start with your own.</div>
+
+        <!-- Context strip — loads from Supabase -->
+        <div class="context-strip" id="ctx-strip" style="display:none;">
+          <div class="ctx-card" id="ctx-pro">
+            <div class="ctx-label">Professional Focus</div>
+            <div class="ctx-value" id="ctx-pro-val">—</div>
+          </div>
+          <div class="ctx-card" id="ctx-per">
+            <div class="ctx-label">Personal Focus</div>
+            <div class="ctx-value" id="ctx-per-val">—</div>
+          </div>
+          <div class="ctx-card full" id="ctx-last" style="display:none;">
+            <div class="ctx-label">Last Session</div>
+            <div class="ctx-value" id="ctx-last-val">—</div>
+            <div class="ctx-sub" id="ctx-last-date">—</div>
+          </div>
+        </div>
+
+        <!-- Prompt chips -->
+        <div class="chips-grid">
+          <div class="chip-card" onclick="sendFromChip('Give me my brief')">
+            <div class="chip-card-text">Give me my North Star brief for today</div>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="chip-card" onclick="sendFromChip('Where am I in the quarter?')">
+            <div class="chip-card-text">Where am I in the quarter?</div>
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="chip-card" onclick="sendFromChip('What did I accomplish recently?')">
+            <div class="chip-card-text">What did I accomplish recently?</div>
+            <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="chip-card" onclick="sendFromChip('What is my watch-out this quarter?')">
+            <div class="chip-card-text">What is my watch-out this quarter?</div>
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+        </div>
+
+        <!-- Home input box -->
+        <div class="home-input-wrap">
+          <textarea class="home-input" id="home-input" placeholder="Ask whatever you want…" rows="2"
+            onkeydown="handleHomeKey(event)" oninput="autoResize(this)"></textarea>
+          <div class="home-input-footer">
+            <button class="send-btn" id="home-send-btn" onclick="sendFromHome()">
+              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 
+  <!-- CHAT VIEW -->
   <div class="view" id="view-chat">
     <div class="chat-wrap">
       <div class="chat-header">
-        <div class="chat-header-icon">&#10022;</div>
+        <div class="chat-header-icon">✦</div>
         <div>
           <div class="chat-header-title">Daily Brief</div>
-          <div class="chat-header-sub">Chief of Staff &mdash; direct line &#10003;</div>
+          <div class="chat-header-sub">Chief of Staff — direct line ✓</div>
         </div>
       </div>
       <div class="messages" id="messages">
-        <div class="empty-chat" id="empty-state">
-          <div class="empty-chat-icon">&#10022;</div>
-          <div class="empty-chat-title">Your Chief of Staff is ready</div>
-          <div class="empty-chat-sub">Ask anything about your operating picture, or start with one of these:</div>
-          <div class="prompt-chips">
-            <div class="chip" onclick="sendChip(this)">Give me my brief</div>
-            <div class="chip" onclick="sendChip(this)">What's my focus this week?</div>
-            <div class="chip" onclick="sendChip(this)">What did I accomplish recently?</div>
-            <div class="chip" onclick="sendChip(this)">Where am I in the quarter?</div>
-          </div>
-        </div>
+        <!-- populated by JS -->
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff&hellip;" rows="1"
+          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="send-btn" id="send-btn" onclick="sendMessage()">&#10148;</button>
+          <div class="chat-input-row">
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- HISTORY VIEW -->
   <div class="view" id="view-history">
-    <div class="dash-content">
-      <div class="dash-header">
-        <div class="dash-greeting" style="font-size:20px;">Session History</div>
-        <div class="dash-date">Your recent sessions</div>
+    <div class="home-wrap">
+      <div class="home-inner">
+        <div class="home-greeting" style="font-size:22px; margin-bottom:4px;">Session History</div>
+        <div class="home-sub" style="margin-bottom:24px;">Your recent sessions</div>
+        <div id="history-list"><div style="color:var(--muted);text-align:center;padding:40px;">Loading…</div></div>
       </div>
-      <div class="gold-rule"></div>
-      <div id="history-list"><div style="text-align:center;padding:40px;color:var(--muted);">Loading&hellip;</div></div>
     </div>
   </div>
+
 </main>
 
 <script>
@@ -479,13 +490,10 @@ let chatHistory = [];
 window.addEventListener('DOMContentLoaded', async () => {
   const email = localStorage.getItem('ns_email');
   const userId = localStorage.getItem('ns_user_id');
-  if (!email || !userId) {
-    window.location.href = 'index.html';
-    return;
-  }
+  if (!email || !userId) { window.location.href = 'index.html'; return; }
   session = { email, userId };
   await loadProfile(email, userId);
-  await loadDashboard();
+  await loadHomeContext();
   document.getElementById('loading').style.display = 'none';
 });
 
@@ -499,108 +507,99 @@ async function sbQuery(table, params = '') {
 async function sbInsert(table, payload) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    },
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error('Supabase insert failed: ' + err);
-  }
+  if (!res.ok) throw new Error('Supabase insert failed: ' + await res.text());
   return res.json();
 }
 
 async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email&limit=1`);
-  if (rows && rows.length > 0) {
-    userProfile = rows[0];
-  } else {
-    userProfile = { id: userId, email, display_name: email.split('@')[0] };
-  }
-  initUI();
-}
-
-function initUI() {
+  userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0] };
   const name = userProfile?.display_name || '';
   const firstName = name.split(' ')[0];
-  document.getElementById('user-first-name').textContent = firstName;
+  document.getElementById('user-first-name-home').textContent = firstName;
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
-  const hr = new Date().getHours();
-  document.getElementById('time-greeting').textContent = hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : 'evening';
-  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 }
 
-async function loadDashboard() {
+async function loadHomeContext() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
-  const [aop, quarterly, receipts] = await Promise.all([
-    sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival,mission_statement&order=created_at.desc&limit=1`),
-    sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal,quarterly_watch_out&order=created_at.desc&limit=1`),
-    sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,bronze_status,completion_status&order=session_date.desc&limit=5`),
+  const [quarterly, receipts] = await Promise.all([
+    sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal&order=created_at.desc&limit=1`),
+    sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,completion_status&order=session_date.desc&limit=1`),
   ]);
-  renderDashboard(aop?.[0], quarterly?.[0], receipts || []);
-  loadHistory(receipts || []);
-}
-
-function renderDashboard(aop, quarterly, receipts) {
-  const el = document.getElementById('dash-cards');
-  const last = receipts[0];
-  el.innerHTML = `
-    ${quarterly ? `
-    <div class="card"><div class="card-label">Professional Focus</div><div class="card-value">${esc(quarterly.quarterly_focus_professional||'—')}</div><div class="card-sub">${esc(quarterly.quarter||'')}</div></div>
-    <div class="card"><div class="card-label">Personal Focus</div><div class="card-value">${esc(quarterly.quarterly_focus_personal||'—')}</div>${quarterly.quarterly_watch_out?`<div class="card-sub">Watch out: ${esc(quarterly.quarterly_watch_out)}</div>`:''}</div>` : ''}
-    ${aop ? `<div class="card full"><div class="card-label">Annual Arrival</div><div class="card-value">${esc(aop.annual_arrival||'—')}</div>${aop.mission_statement?`<div class="card-sub" style="margin-top:10px;font-size:13px;color:#aaa;">${esc(aop.mission_statement)}</div>`:''}</div>` : ''}
-    ${last ? `<div class="card full"><div class="card-label">Most Recent Session</div><div class="card-value" style="display:flex;align-items:center;gap:10px;">${esc(last.bronze_task||'—')}${last.completion_status?`<span class="badge badge-${last.completion_status==='gold'?'gold':last.completion_status==='silver'?'gray':'green'}">${last.completion_status}</span>`:''}</div><div class="card-sub">${formatDate(last.session_date)}</div></div>` : ''}
-    ${receipts.length===0 ? `<div class="card full" style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:24px;margin-bottom:12px;">&#10022;</div>No sessions yet. Open the Daily Brief to get started.</div>` : ''}
-  `;
+  const q = quarterly?.[0];
+  const last = receipts?.[0];
+  if (q?.quarterly_focus_professional) {
+    document.getElementById('ctx-pro-val').textContent = q.quarterly_focus_professional;
+    document.getElementById('ctx-per-val').textContent = q.quarterly_focus_personal || '—';
+    document.getElementById('ctx-strip').style.display = 'grid';
+  }
+  if (last?.bronze_task) {
+    document.getElementById('ctx-last-val').textContent = last.bronze_task;
+    document.getElementById('ctx-last-date').textContent = formatDate(last.session_date);
+    document.getElementById('ctx-last').style.display = 'block';
+  }
+  // load history too
+  const allReceipts = await sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,bronze_status,completion_status&order=session_date.desc&limit=10`);
+  loadHistory(allReceipts || []);
 }
 
 function loadHistory(receipts) {
   const el = document.getElementById('history-list');
   if (!receipts.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">No sessions yet.</div>'; return; }
   el.innerHTML = receipts.map(r => `
-    <div class="card" style="margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="card-label">${formatDate(r.session_date)}</div>
-        ${r.completion_status?`<span class="badge badge-${r.completion_status==='gold'?'gold':r.completion_status==='silver'?'gray':'green'}">${r.completion_status}</span>`:''}
+    <div class="hist-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);">${formatDate(r.session_date)}</div>
+        ${r.completion_status ? `<span class="badge badge-${r.completion_status === 'gold' ? 'gold' : r.completion_status === 'silver' ? 'gray' : 'green'}">${r.completion_status}</span>` : ''}
       </div>
-      <div class="card-value" style="font-size:14px;">${esc(r.bronze_task||'—')}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(r.bronze_task || '—')}</div>
     </div>
   `).join('');
 }
 
 function switchView(name) {
-  ['dash','chat','history'].forEach(v => {
-    document.getElementById('view-'+v).classList.toggle('active', v===name);
-    document.getElementById('nav-'+v)?.classList.toggle('active', v===name);
+  const views = ['home', 'chat', 'history'];
+  views.forEach(v => {
+    document.getElementById('view-' + v).classList.toggle('active', v === name);
+    const nb = document.getElementById('nav-' + v);
+    if (nb) nb.classList.toggle('active', v === name);
   });
 }
 
-function sendChip(el) { document.getElementById('chat-input').value = el.textContent; sendMessage(); }
-function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function sendFromChip(text) {
+  switchView('chat');
+  setTimeout(() => {
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+  }, 50);
+}
 
-// ─── RECEIPT HANDLING ──────────────────────────────────────────────────────────────────────────────
+function sendFromHome() {
+  const text = document.getElementById('home-input').value.trim();
+  if (!text) return;
+  document.getElementById('home-input').value = '';
+  switchView('chat');
+  setTimeout(() => {
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+  }, 50);
+}
 
-// Generate receipt number: NSR-YYYYMMDD-001
+function handleHomeKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromHome(); } }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
+// ── RECEIPT HANDLING ──────────────────────────────────────────────────────────
+
 async function generateReceiptNumber() {
-  const today = new Date().toLocaleDateString('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric', month: '2-digit', day: '2-digit'
-  });
-  // Convert MM/DD/YYYY to YYYYMMDD
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
   const [m, d, y] = today.split('/');
   const dateStr = y + m + d;
-
-  // Query highest sequence for today
-  const rows = await sbQuery(
-    'session_receipts',
-    `receipt_number=like.NSR-${dateStr}-%25&select=receipt_number&order=receipt_number.desc&limit=1`
-  );
+  const rows = await sbQuery('session_receipts', `receipt_number=like.NSR-${dateStr}-%25&select=receipt_number&order=receipt_number.desc&limit=1`);
   let seq = 1;
   if (rows && rows.length > 0 && rows[0].receipt_number) {
     const parts = rows[0].receipt_number.split('-');
@@ -609,62 +608,35 @@ async function generateReceiptNumber() {
   return `NSR-${dateStr}-${String(seq).padStart(3, '0')}`;
 }
 
-// Write receipt to Supabase — called by processReceiptBlock
 async function writeSessionReceipt(fields) {
   if (!userProfile?.id) throw new Error('No user profile');
-
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const receiptNumber = await generateReceiptNumber();
-
   const payload = {
-    user_id: userProfile.id,
-    session_date: today,
-    room_id: 'north-star-room',
-    receipt_number: receiptNumber,
-    session_scope: fields.session_scope || null,
-    bronze_task: fields.bronze_task || null,
-    bronze_status: fields.bronze_status || null,
-    completion_status: fields.completion_status || 'bronze',
-    trigger_context: fields.trigger_context || 'daily_work',
-    outcome_type: fields.outcome_type || null,
-    thread_tag: fields.thread_tag || null,
-    rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff',
-    carried_forward: fields.carried_forward || null
+    user_id: userProfile.id, session_date: today, room_id: 'north-star-room',
+    receipt_number: receiptNumber, session_scope: fields.session_scope || null,
+    bronze_task: fields.bronze_task || null, bronze_status: fields.bronze_status || null,
+    completion_status: fields.completion_status || 'bronze', trigger_context: fields.trigger_context || 'daily_work',
+    outcome_type: fields.outcome_type || null, thread_tag: fields.thread_tag || null,
+    rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff', carried_forward: fields.carried_forward || null
   };
-
   const rows = await sbInsert('session_receipts', payload);
   return { receiptNumber, row: rows?.[0] || null };
 }
 
-// Detect %%RECEIPT%%{...}%%END_RECEIPT%% in assistant response.
-// Returns { displayText, receiptNumber } — receiptNumber is null if no block found or write fails.
 async function processReceiptBlock(text) {
   const start = text.indexOf('%%RECEIPT%%');
   const end = text.indexOf('%%END_RECEIPT%%');
-
-  if (start === -1 || end === -1 || end < start) {
-    return { displayText: text, receiptNumber: null };
-  }
-
+  if (start === -1 || end === -1 || end < start) return { displayText: text, receiptNumber: null };
   const jsonStr = text.slice(start + '%%RECEIPT%%'.length, end).trim();
-  // Remove the block from display text
   let displayText = (text.slice(0, start) + text.slice(end + '%%END_RECEIPT%%'.length)).trim();
-
   let receiptNumber = null;
   try {
     const fields = JSON.parse(jsonStr);
     const result = await writeSessionReceipt(fields);
     receiptNumber = result.receiptNumber;
-    // Replace the placeholder close line with the real receipt number
-    displayText = displayText.replace(
-      /Session closed\..*$/m,
-      `Session closed. ${receiptNumber}`
-    );
-  } catch (err) {
-    console.error('Receipt write failed:', err);
-    // Leave display text as-is, no receipt number surfaced
-  }
-
+    displayText = displayText.replace(/Session closed\..*$/m, `Session closed. ${receiptNumber}`);
+  } catch (err) { console.error('Receipt write failed:', err); }
   return { displayText, receiptNumber };
 }
 
@@ -677,7 +649,6 @@ async function sendMessage() {
   const sendBtn = document.getElementById('send-btn');
   sendBtn.disabled = true;
   input.value = ''; input.style.height = 'auto';
-  document.getElementById('empty-state')?.remove();
   appendMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
   const typingEl = appendTyping();
@@ -692,17 +663,10 @@ async function sendMessage() {
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     const rawReply = data.message || 'Something went wrong.';
-
-    // Process receipt block if present
     const { displayText, receiptNumber } = await processReceiptBlock(rawReply);
-
     appendMessage('assistant', displayText);
-    // Store cleaned text in history (no receipt block)
     chatHistory.push({ role: 'assistant', content: displayText });
-
-    if (receiptNumber) {
-      console.log('Receipt written:', receiptNumber);
-    }
+    if (receiptNumber) console.log('Receipt written:', receiptNumber);
   } catch (err) {
     typingEl.remove();
     appendMessage('assistant', 'Connection error. Please try again.');
@@ -731,108 +695,59 @@ async function buildContext() {
 }
 
 function renderMarkdown(text) {
-  let out = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  out = out
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  out = out
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  out = out.replace(/^---$/gm, '<hr>');
-  out = out.replace(/^(\d+)\.\s+(.+)$/gm, '<li value="$1">$2</li>');
-  out = out.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
-  out = out.replace(/(<li[^>]*>.*<\/li>\n?)+/g, function(block) {
-    return block.includes('value=') ? '<ol>' + block + '</ol>' : '<ul>' + block + '</ul>';
-  });
-
-  out = out
-    .replace(/\n\n+/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^(.+)$/, '<p>$1</p>');
-
+  let out = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  out = out.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  out = out.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+  out = out.replace(/^---$/gm,'<hr>');
+  out = out.replace(/^(\d+)\.\s+(.+)$/gm,'<li value="$1">$2</li>');
+  out = out.replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>');
+  out = out.replace(/(<li[^>]*>.*<\/li>\n?)+/g, b => b.includes('value=') ? '<ol>'+b+'</ol>' : '<ul>'+b+'</ul>');
+  out = out.replace(/\n\n+/g,'</p><p>').replace(/\n/g,'<br>').replace(/^(.+)$/,'<p>$1</p>');
   return out;
 }
 
-// Get plain text from a rendered assistant bubble (strips HTML)
-function getBubblePlainText(bubbleEl) {
-  return bubbleEl.innerText || bubbleEl.textContent || '';
-}
+const ICON_COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
 
 function appendMessage(role, text) {
   const msgs = document.getElementById('messages');
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   const div = document.createElement('div');
   div.className = `msg ${role}`;
-
   if (role === 'assistant') {
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     bubble.innerHTML = renderMarkdown(text);
-
-    const timeEl = document.createElement('div');
-    timeEl.className = 'msg-time';
-    timeEl.textContent = time;
-
-    // Copy button row — clipboard icon only
     const actionsEl = document.createElement('div');
     actionsEl.className = 'msg-actions';
-
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-btn';
     copyBtn.title = 'Copy to clipboard';
-    copyBtn.innerHTML = '&#128203;'; // 📋 clipboard
+    copyBtn.innerHTML = ICON_COPY;
     copyBtn.addEventListener('click', () => {
-      const plainText = getBubblePlainText(bubble);
+      const plainText = bubble.innerText || bubble.textContent || '';
       navigator.clipboard.writeText(plainText).then(() => {
-        copyBtn.classList.add('copied');
-        copyBtn.innerHTML = '&#10003;'; // ✓
-        setTimeout(() => {
-          copyBtn.classList.remove('copied');
-          copyBtn.innerHTML = '&#128203;';
-        }, 1500);
+        copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK;
+        setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500);
       }).catch(() => {
-        // Fallback for older browsers
         const ta = document.createElement('textarea');
-        ta.value = plainText;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        copyBtn.classList.add('copied');
-        copyBtn.innerHTML = '&#10003;';
-        setTimeout(() => {
-          copyBtn.classList.remove('copied');
-          copyBtn.innerHTML = '&#128203;';
-        }, 1500);
+        ta.value = plainText; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK;
+        setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500);
       });
     });
-
     actionsEl.appendChild(copyBtn);
-
-    div.appendChild(bubble);
-    div.appendChild(actionsEl);
-    div.appendChild(timeEl);
+    const timeEl = document.createElement('div');
+    timeEl.className = 'msg-time'; timeEl.textContent = time;
+    div.appendChild(bubble); div.appendChild(actionsEl); div.appendChild(timeEl);
   } else {
     const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble';
-    bubble.textContent = text;
+    bubble.className = 'msg-bubble'; bubble.textContent = text;
     const timeEl = document.createElement('div');
-    timeEl.className = 'msg-time';
-    timeEl.textContent = time;
-    div.appendChild(bubble);
-    div.appendChild(timeEl);
+    timeEl.className = 'msg-time'; timeEl.textContent = time;
+    div.appendChild(bubble); div.appendChild(timeEl);
   }
-
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
@@ -842,7 +757,7 @@ function appendTyping() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'msg assistant';
-  div.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  div.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
