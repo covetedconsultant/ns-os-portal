@@ -129,6 +129,20 @@ exports.handler = async (event) => {
       const csReceiptPrompt = await getPrompt('cs-receipt');
       if (csReceiptPrompt) {
         systemPrompt += '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt;
+        // CUSTOM BUILD OUTPUT OVERRIDE — appended LAST so it is the final instruction the model reads.
+        // This overrides any human-readable receipt format in the cs-receipt prompt above.
+        systemPrompt += '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED\n\n' +
+          'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). ' +
+          'After completing the parking lot sweep, output your session close in EXACTLY this format — no exceptions:\n\n' +
+          '[Your brief closing words — 1-3 sentences max]\n' +
+          '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"daily_work","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"Daily Work — Chief of Staff","carried_forward":"[any open items or none]"}%%END_RECEIPT%%\n' +
+          'Session closed. [receipt pending]\n\n' +
+          'RULES:\n' +
+          '- Do NOT output a bullet list of receipt fields.\n' +
+          '- Do NOT output any text after "Session closed. [receipt pending]".\n' +
+          '- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n' +
+          '- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n' +
+          '- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
       }
     }
 
