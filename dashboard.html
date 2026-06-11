@@ -316,12 +316,6 @@
     .chat-input::placeholder { color: var(--muted); }
     .chat-input-row { display: flex; justify-content: flex-end; }
 
-    .hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-    .badge-gold { background: #fdf8ee; color: var(--gold); }
-    .badge-green { background: #f0fdf4; color: #16a34a; }
-    .badge-gray { background: #f5f5f5; color: #888; }
-
     .account-wrap {
       flex: 1;
       overflow-y: auto;
@@ -379,18 +373,27 @@
   <div class="sidebar-logo">
     <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
   </div>
+  <!-- Home -->
   <div class="nav-btn active" id="nav-home" onclick="switchView('home')">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <div class="tooltip">Home</div>
   </div>
+  <!-- Your Setup (Chat A) -->
+  <div class="nav-btn" id="nav-setup" onclick="switchView('setup')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <div class="tooltip">Your Setup</div>
+  </div>
+  <!-- Daily Brief (Chat B) -->
   <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <div class="tooltip">Daily Brief</div>
   </div>
-  <div class="nav-btn" id="nav-history" onclick="switchView('history')">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    <div class="tooltip">Session History</div>
+  <!-- Prep Room (Chat C) -->
+  <div class="nav-btn" id="nav-prep" onclick="switchView('prep')">
+    <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <div class="tooltip">Prep Room</div>
   </div>
+  <!-- Gold Tier (Chat D — locked for tier 1/2) -->
   <div class="nav-btn locked" id="nav-coaching" onclick="handleCoachingClick()">
     <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <div class="tooltip">Gold Tier</div>
@@ -431,6 +434,28 @@
     </div>
   </div>
 
+  <!-- Your Setup (Chat A) -->
+  <div class="view" id="view-setup">
+    <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="chat-header-icon">⚙</div>
+        <div><div class="chat-header-title">Your Setup</div><div class="chat-header-sub">Build your operating picture</div></div>
+      </div>
+      <div class="op-card" id="op-summary-card-setup">
+        <div class="op-card-label">Your North Star</div>
+        <div class="op-card-value" id="op-summary-text-setup">—</div>
+      </div>
+      <div class="messages" id="messages-setup"></div>
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
+          <div class="chat-input-row"><button class="send-btn" id="send-btn-setup" onclick="sendMessage('setup')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Brief (Chat B) -->
   <div class="view" id="view-chat">
     <div class="chat-wrap">
       <div class="chat-header">
@@ -445,18 +470,27 @@
       <div class="chat-input-area">
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-          <div class="chat-input-row"><button class="send-btn" id="send-btn" onclick="sendMessage()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+          <div class="chat-input-row"><button class="send-btn" id="send-btn" onclick="sendMessage('chat')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="view" id="view-history">
-    <div class="home-wrap"><div class="home-inner">
-      <div class="home-greeting" style="font-size:22px; margin-bottom:4px;">Session History</div>
-      <div class="home-sub" style="margin-bottom:24px;">Your recent sessions</div>
-      <div id="history-list"><div style="color:var(--muted);text-align:center;padding:40px;">Loading…</div></div>
-    </div></div>
+  <!-- Prep Room (Chat C) -->
+  <div class="view" id="view-prep">
+    <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="chat-header-icon">📖</div>
+        <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what's ahead</div></div>
+      </div>
+      <div class="messages" id="messages-prep"></div>
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" rows="1" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
+          <div class="chat-input-row"><button class="send-btn" id="send-btn-prep" onclick="sendMessage('prep')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="view" id="view-account">
@@ -497,7 +531,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const API_ENDPOINT = '/api/chat';
 let session = null;
 let userProfile = null;
-let chatHistory = [];
+let chatHistories = { setup: [], chat: [], prep: [] };
 
 window.addEventListener('DOMContentLoaded', async () => {
   const email = localStorage.getItem('ns_email');
@@ -547,8 +581,14 @@ async function loadHomeContext() {
   const aopRows = await sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival&order=created_at.desc&limit=1`);
   const aop = aopRows?.[0];
   if (aop?.annual_arrival) {
-    document.getElementById('op-summary-text').textContent = aop.annual_arrival;
-    document.getElementById('op-summary-card').classList.add('visible');
+    ['op-summary-text', 'op-summary-text-setup'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = aop.annual_arrival;
+    });
+    ['op-summary-card', 'op-summary-card-setup'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('visible');
+    });
   }
   const [quarterly, receipts] = await Promise.all([
     sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal&order=created_at.desc&limit=1`),
@@ -566,15 +606,7 @@ async function loadHomeContext() {
     document.getElementById('ctx-last-date').textContent = formatDate(last.session_date);
     document.getElementById('ctx-last').style.display = 'block';
   }
-  const allReceipts = await sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,bronze_status,completion_status&order=session_date.desc&limit=10`);
-  loadHistory(allReceipts || []);
   loadDocuments(uid);
-}
-
-function loadHistory(receipts) {
-  const el = document.getElementById('history-list');
-  if (!receipts.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">No sessions yet.</div>'; return; }
-  el.innerHTML = receipts.map(r => `<div class="hist-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);">${formatDate(r.session_date)}</div>${r.completion_status ? `<span class="badge badge-${r.completion_status === 'gold' ? 'gold' : r.completion_status === 'silver' ? 'gray' : 'green'}">${r.completion_status}</span>` : ''}</div><div style="font-size:13px;font-weight:600;color:var(--text);">${esc(r.bronze_task || '—')}</div></div>`).join('');
 }
 
 async function loadDocuments(uid) {
@@ -582,7 +614,7 @@ async function loadDocuments(uid) {
 }
 
 function switchView(name) {
-  ['home','chat','history','account','coaching'].forEach(v => {
+  ['home','setup','chat','prep','account','coaching'].forEach(v => {
     const viewEl = document.getElementById('view-' + v);
     if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v);
@@ -596,10 +628,12 @@ function handleCoachingClick() {
   alert('The Gold Tier is available for coaching clients.\nContact support@covetedconsultant.com to upgrade.');
 }
 
-function sendFromChip(text) { switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage(); }, 50); }
-function sendFromHome() { const text = document.getElementById('home-input').value.trim(); if (!text) return; document.getElementById('home-input').value = ''; switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage(); }, 50); }
+function sendFromChip(text) { switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage('chat'); }, 50); }
+function sendFromHome() { const text = document.getElementById('home-input').value.trim(); if (!text) return; document.getElementById('home-input').value = ''; switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage('chat'); }, 50); }
 function handleHomeKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromHome(); } }
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('chat'); } }
+function handleKeySetup(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('setup'); } }
+function handleKeyPrep(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('prep'); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
 async function generateReceiptNumber() {
@@ -632,28 +666,31 @@ async function processReceiptBlock(text) {
   return { displayText, receiptNumber };
 }
 
-async function sendMessage() {
-  const input = document.getElementById('chat-input');
+async function sendMessage(chatId) {
+  const inputId = chatId === 'chat' ? 'chat-input' : `chat-input-${chatId}`;
+  const sendBtnId = chatId === 'chat' ? 'send-btn' : `send-btn-${chatId}`;
+  const messagesId = chatId === 'chat' ? 'messages' : `messages-${chatId}`;
+  const input = document.getElementById(inputId);
   const text = input.value.trim();
   if (!text || !session) return;
-  const sendBtn = document.getElementById('send-btn');
+  const sendBtn = document.getElementById(sendBtnId);
   sendBtn.disabled = true;
   input.value = ''; input.style.height = 'auto';
-  appendMessage('user', text);
-  chatHistory.push({ role: 'user', content: text });
-  const typingEl = appendTyping();
+  appendMessage(messagesId, 'user', text);
+  chatHistories[chatId].push({ role: 'user', content: text });
+  const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistory, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     const rawReply = data.message || 'Something went wrong.';
     const { displayText, receiptNumber } = await processReceiptBlock(rawReply);
-    appendMessage('assistant', displayText);
-    chatHistory.push({ role: 'assistant', content: displayText });
+    appendMessage(messagesId, 'assistant', displayText);
+    chatHistories[chatId].push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
-  } catch (err) { typingEl.remove(); appendMessage('assistant', 'Connection error. Please try again.'); console.error(err); }
+  } catch (err) { typingEl.remove(); appendMessage(messagesId, 'assistant', 'Connection error. Please try again.'); console.error(err); }
   sendBtn.disabled = false;
   input.focus();
 }
@@ -685,8 +722,8 @@ function renderMarkdown(text) {
 const ICON_COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function appendMessage(role, text) {
-  const msgs = document.getElementById('messages');
+function appendMessage(messagesId, role, text) {
+  const msgs = document.getElementById(messagesId);
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   const div = document.createElement('div');
   div.className = `msg ${role}`;
@@ -710,8 +747,8 @@ function appendMessage(role, text) {
   return div;
 }
 
-function appendTyping() {
-  const msgs = document.getElementById('messages');
+function appendTyping(messagesId) {
+  const msgs = document.getElementById(messagesId);
   const div = document.createElement('div'); div.className = 'msg assistant';
   div.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
   msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
