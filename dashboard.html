@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11f -->
+  <!-- cache-bust: 2026-06-11g -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -177,6 +177,11 @@
     .send-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .send-btn:hover { background: var(--gold-light); }
     .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Onboarding countdown */
+    .onboarding-countdown { display: flex; justify-content: center; margin-top: 20px; }
+    .onboarding-countdown-inner { max-width: 660px; width: 100%; background: var(--gold-bg); border: 1px solid #e8d89a; border-radius: 12px; padding: 14px 20px; font-size: 14px; color: var(--text); text-align: center; line-height: 1.6; }
+    .onboarding-countdown-inner a { color: var(--gold); font-weight: 600; text-decoration: underline; cursor: pointer; }
 
     /* ACCOUNT */
     .account-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 60px 24px 60px; }
@@ -473,6 +478,8 @@ const API_ENDPOINT = '/api/chat';
 let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [] };
+let autoStartFired = false;
+let countdownActive = false;
 
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
@@ -503,6 +510,30 @@ function launchConfetti() {
   draw();
 }
 
+function startCountdownRedirect(messagesId) {
+  if (countdownActive) return;
+  countdownActive = true;
+  const msgs = document.getElementById(messagesId);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'onboarding-countdown';
+  const inner = document.createElement('div');
+  inner.className = 'onboarding-countdown-inner';
+  inner.innerHTML = `Taking you to your dashboard in <strong><span id="countdown-num">5</span></strong>… <a href="dashboard.html?celebrate=true">go now →</a>`;
+  wrapper.appendChild(inner);
+  msgs.appendChild(wrapper);
+  msgs.scrollTop = msgs.scrollHeight;
+  let count = 5;
+  const interval = setInterval(() => {
+    count--;
+    const el = document.getElementById('countdown-num');
+    if (el) el.textContent = count;
+    if (count <= 0) {
+      clearInterval(interval);
+      window.location.href = 'dashboard.html?celebrate=true';
+    }
+  }, 1000);
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   const email = localStorage.getItem('ns_email');
   const userId = localStorage.getItem('ns_user_id');
@@ -515,8 +546,51 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (params.get('celebrate') === 'true') {
     setTimeout(launchConfetti, 400);
     window.history.replaceState({}, '', window.location.pathname);
+  } else if (params.get('new') === 'true') {
+    // New user — route directly to setup and fire auto-start
+    window.history.replaceState({}, '', window.location.pathname);
+    switchView('setup');
+    setTimeout(() => triggerAutoStart(), 600);
   }
 });
+
+async function triggerAutoStart() {
+  if (autoStartFired) return;
+  autoStartFired = true;
+  const messagesId = 'messages-setup';
+  const sendBtn = document.getElementById('send-btn-setup');
+  if (sendBtn) sendBtn.disabled = true;
+  const typingEl = appendTyping(messagesId);
+  try {
+    const context = await buildContext();
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: '__AUTOSTART__' }],
+        context,
+        userId: userProfile?.id || session?.userId,
+        userName: userProfile?.display_name
+      })
+    });
+    typingEl.remove();
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const rawReply = data.message || '';
+    const displayText = rawReply.replace(/\[NORTH_STAR_COMPLETE\]/g, '').trim();
+    appendMessage(messagesId, 'assistant', displayText);
+    chatHistories['setup'].push({ role: 'assistant', content: displayText });
+    if (rawReply.includes('[NORTH_STAR_COMPLETE]')) {
+      startCountdownRedirect(messagesId);
+    }
+  } catch (err) {
+    typingEl.remove();
+    appendMessage(messagesId, 'assistant', 'Hello! I\'m your Chief of Staff. Let\'s build your operating picture together. To start — what\'s your name?');
+    chatHistories['setup'].push({ role: 'assistant', content: 'Hello! I\'m your Chief of Staff. Let\'s build your operating picture together. To start — what\'s your name?' });
+    console.error('Auto-start error:', err);
+  }
+  if (sendBtn) sendBtn.disabled = false;
+}
 
 async function sbQuery(table, params = '') {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
@@ -674,15 +748,22 @@ async function writeSessionReceipt(fields) {
   return { receiptNumber, row: rows?.[0] || null };
 }
 
-async function processReceiptBlock(text) {
+async function processReceiptBlock(text, messagesId) {
+  const hasComplete = text.includes('[NORTH_STAR_COMPLETE]');
   text = text.replace(/\[NORTH_STAR_COMPLETE\]/g, '').trim();
   const start = text.indexOf('%%RECEIPT%%');
   const end = text.indexOf('%%END_RECEIPT%%');
-  if (start === -1 || end === -1 || end < start) return { displayText: text, receiptNumber: null };
-  const jsonStr = text.slice(start + '%%RECEIPT%%'.length, end).trim();
-  let displayText = (text.slice(0, start) + text.slice(end + '%%END_RECEIPT%%'.length)).trim();
+  let displayText = text;
   let receiptNumber = null;
-  try { const fields = JSON.parse(jsonStr); const result = await writeSessionReceipt(fields); receiptNumber = result.receiptNumber; displayText = displayText.replace(/Session closed\..*$/m, `Session closed. ${receiptNumber}`); } catch (err) { console.error('Receipt write failed:', err); }
+  if (start !== -1 && end !== -1 && end > start) {
+    const jsonStr = text.slice(start + '%%RECEIPT%%'.length, end).trim();
+    displayText = (text.slice(0, start) + text.slice(end + '%%END_RECEIPT%%'.length)).trim();
+    try { const fields = JSON.parse(jsonStr); const result = await writeSessionReceipt(fields); receiptNumber = result.receiptNumber; displayText = displayText.replace(/Session closed\..*$/m, `Session closed. ${receiptNumber}`); } catch (err) { console.error('Receipt write failed:', err); }
+  }
+  if (hasComplete && messagesId) {
+    // Defer countdown slightly so the bubble renders first
+    setTimeout(() => startCountdownRedirect(messagesId), 300);
+  }
   return { displayText, receiptNumber };
 }
 
@@ -706,7 +787,7 @@ async function sendMessage(chatId) {
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     const rawReply = data.message || 'Something went wrong.';
-    const { displayText, receiptNumber } = await processReceiptBlock(rawReply);
+    const { displayText, receiptNumber } = await processReceiptBlock(rawReply, messagesId);
     appendMessage(messagesId, 'assistant', displayText);
     chatHistories[chatId].push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
