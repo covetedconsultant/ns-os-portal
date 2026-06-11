@@ -1,5 +1,10 @@
 // app.js — Login page logic
-// Simple credential map — no real auth, just identity resolution for testing
+// After login: checks annual_operating_picture row.
+// No row → new user → redirect to dashboard.html?new=true (auto-routes to setup + fires CS-11)
+// Row exists → returning user → redirect to dashboard.html
+
+const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
 
 const USERS = {
   'coveted.consultant@gmail.com': {
@@ -15,6 +20,16 @@ const USERS = {
     userId: 'fd019cd2-ba6d-43a9-9b9e-ef2de4fd3582'
   }
 };
+
+async function hasOperatingPicture(userId) {
+  // Filter ONLY by user_id (UUID) — never by name or email
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${userId}&select=id&limit=1`,
+    { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+  );
+  const data = await res.json();
+  return Array.isArray(data) && data.length > 0;
+}
 
 const form = document.getElementById('login-form');
 if (form) {
@@ -41,6 +56,21 @@ if (form) {
     // Store identity in localStorage
     localStorage.setItem('ns_email', email);
     localStorage.setItem('ns_user_id', user.userId);
-    window.location.href = 'dashboard.html';
+
+    // Check for existing operating picture — determines new vs. returning user
+    try {
+      const hasOP = await hasOperatingPicture(user.userId);
+      if (!hasOP) {
+        // New user — no operating picture yet → route to setup view with auto-start
+        window.location.href = 'dashboard.html?new=true';
+      } else {
+        // Returning user — operating picture exists → go to dashboard home
+        window.location.href = 'dashboard.html';
+      }
+    } catch (err) {
+      // On network error, fall back to dashboard home (safe default)
+      console.error('AOP check failed:', err);
+      window.location.href = 'dashboard.html';
+    }
   });
 }
