@@ -2,6 +2,8 @@
 // CS-11 routing: if no annual_operating_picture row for this user → fire CS-11.
 // If row exists → load cs-12 (returning user / gold operating picture).
 // CS-1, CS-9, CS-Receipt load on-demand as before.
+// AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
+// and writes the row to annual_operating_picture before returning the response.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -29,6 +31,67 @@ async function hasOperatingPicture(userId) {
   });
   const data = await res.json();
   return Array.isArray(data) && data.length > 0;
+}
+
+async function writeAOP(aopData) {
+  // Validate user_id is a UUID — never allow name/email as filter
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!aopData.user_id || !uuidPattern.test(aopData.user_id)) {
+    throw new Error('AOP write rejected: user_id must be a valid UUID');
+  }
+
+  // Check if row already exists — upsert by user_id
+  const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${aopData.user_id}&select=id&limit=1`, {
+    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+  });
+  const existing = await checkRes.json();
+
+  if (existing && existing.length > 0) {
+    // Update existing row
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${aopData.user_id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(aopData)
+    });
+    if (!patchRes.ok) throw new Error('AOP PATCH failed: ' + await patchRes.text());
+    return await patchRes.json();
+  } else {
+    // Insert new row
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(aopData)
+    });
+    if (!insertRes.ok) throw new Error('AOP INSERT failed: ' + await insertRes.text());
+    return await insertRes.json();
+  }
+}
+
+function extractAndWriteAOP(text, userId) {
+  const start = text.indexOf('%%AOP%%');
+  const end = text.indexOf('%%END_AOP%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  const jsonStr = text.slice(start + '%%AOP%%'.length, end).trim();
+  try {
+    const aopData = JSON.parse(jsonStr);
+    // Always enforce the server-side userId — never trust what the model put in user_id
+    aopData.user_id = userId;
+    return aopData;
+  } catch (e) {
+    console.error('AOP JSON parse failed:', e, 'Raw:', jsonStr);
+    return null;
+  }
 }
 
 function userSelectedOptionB(messages) {
@@ -156,6 +219,23 @@ exports.handler = async (event) => {
     if (!response.ok) { const err = await response.text(); console.error('Anthropic error:', err); throw new Error('Anthropic API error'); }
     const data = await response.json();
     const message = data.content?.[0]?.text || 'No response received.';
+
+    // ── AOP WRITE ─────────────────────────────────────────────────────
+    // If the response contains %%AOP%%...%%END_AOP%%, extract and write to Supabase.
+    // This is the authoritative write path for CS-11 onboarding completion.
+    if (message.includes('%%AOP%%') && message.includes('%%END_AOP%%') && userId) {
+      const aopData = extractAndWriteAOP(message, userId);
+      if (aopData) {
+        try {
+          await writeAOP(aopData);
+          console.log('AOP row written for user:', userId);
+        } catch (aopErr) {
+          // Log but don't fail the response — user still gets the celebration message
+          console.error('AOP write failed:', aopErr);
+        }
+      }
+    }
+
     return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message }) };
 
   } catch (err) {
