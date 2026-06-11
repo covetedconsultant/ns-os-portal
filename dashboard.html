@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11b -->
+  <!-- cache-bust: 2026-06-11c -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -29,6 +29,16 @@
       height: 100vh;
       display: flex;
       overflow: hidden;
+    }
+
+    /* CONFETTI CANVAS */
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
     }
 
     .sidebar {
@@ -236,7 +246,6 @@
     .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text); }
     .chat-header-sub { font-size: 11px; color: var(--muted); }
 
-    /* Scroll container */
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -245,7 +254,6 @@
       flex-direction: column;
     }
 
-    /* Greeting */
     .chat-greeting {
       width: 100%;
       padding: 56px 0 36px;
@@ -318,6 +326,7 @@
     .msg.assistant .msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
     .msg.assistant .msg-bubble code { background: var(--surface2); border-radius: 4px; padding: 1px 5px; font-size: 12px; font-family: monospace; color: var(--gold); }
     .msg.assistant .msg-bubble blockquote { border-left: 3px solid var(--gold); margin: 8px 0; padding: 6px 12px; color: var(--muted); font-style: italic; }
+    .msg.assistant .msg-bubble a { color: var(--gold); text-decoration: underline; cursor: pointer; }
     .msg-time { font-size: 10px; color: var(--muted); padding: 0 2px; }
 
     .msg-actions { display: flex; align-items: center; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
@@ -409,6 +418,8 @@
 </head>
 <body>
 
+<canvas id="confetti-canvas"></canvas>
+
 <div class="loading-overlay" id="loading">
   <div class="loading-logo">
     <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -459,14 +470,12 @@
         <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
         <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 24px;">What would you like to work on?</div>
 
-        <!-- Context strip (shown only if data exists) -->
         <div class="context-strip" id="ctx-strip" style="display:none;">
           <div class="ctx-card" id="ctx-pro"><div class="ctx-label">Professional Focus</div><div class="ctx-value" id="ctx-pro-val">—</div></div>
           <div class="ctx-card" id="ctx-per"><div class="ctx-label">Personal Focus</div><div class="ctx-value" id="ctx-per-val">—</div></div>
           <div class="ctx-card full" id="ctx-last" style="display:none;"><div class="ctx-label">Last Session</div><div class="ctx-value" id="ctx-last-val">—</div><div class="ctx-sub" id="ctx-last-date">—</div></div>
         </div>
 
-        <!-- Navigation cards -->
         <div class="home-section-label">Start a conversation</div>
         <div class="nav-cards-grid">
           <div class="nav-card" onclick="switchView('setup')">
@@ -487,12 +496,11 @@
             <div class="nav-card-icon">📖</div>
             <div>
               <div class="nav-card-title">Prep Room</div>
-              <div class="nav-card-desc">Prepare for what’s ahead.</div>
+              <div class="nav-card-desc">Prepare for what's ahead.</div>
             </div>
           </div>
         </div>
 
-        <!-- Dashboard placeholder -->
         <div class="dashboard-placeholder">
           <div class="dashboard-placeholder-label">Dashboard</div>
           <div class="dashboard-placeholder-text">Your key metrics and progress will appear here as your operating picture develops.</div>
@@ -516,12 +524,12 @@
       <div class="messages" id="messages-setup">
         <div class="chat-greeting">
           <div class="chat-greeting-line1">Getting to know you, <span class="name" id="greeting-name-setup">—</span>.</div>
-          <div class="chat-greeting-line2">Let’s build your operating picture.</div>
+          <div class="chat-greeting-line2">Let's build your operating picture.</div>
         </div>
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input-setup" placeholder="Let’s build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
+          <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-setup" onclick="sendMessage('setup')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
@@ -559,7 +567,7 @@
     <div class="chat-wrap">
       <div class="chat-header">
         <div class="chat-header-icon">📖</div>
-        <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what’s ahead</div></div>
+        <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what's ahead</div></div>
       </div>
       <div class="messages" id="messages-prep">
         <div class="chat-greeting">
@@ -617,6 +625,49 @@ let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [] };
 
+/* ── CONFETTI ─────────────────────────────────────────────────────────── */
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  const colors = ['#B8860B','#D4A017','#FFD700','#FFF8DC','#ffffff','#C0A060'];
+  const pieces = Array.from({ length: 140 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height - canvas.height,
+    r: Math.random() * 6 + 3,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    vx: (Math.random() - 0.5) * 2,
+    vy: Math.random() * 3 + 2,
+    angle: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.2
+  }));
+  let frame = 0;
+  const maxFrames = 180;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - frame / maxFrames);
+      ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+      ctx.restore();
+      p.x += p.vx;
+      p.y += p.vy;
+      p.angle += p.spin;
+      if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+    });
+    frame++;
+    if (frame < maxFrames) requestAnimationFrame(draw);
+    else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; }
+  }
+  draw();
+}
+/* ─────────────────────────────────────────────────────────────────────── */
+
 window.addEventListener('DOMContentLoaded', async () => {
   const email = localStorage.getItem('ns_email');
   const userId = localStorage.getItem('ns_user_id');
@@ -625,6 +676,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadProfile(email, userId);
   await loadHomeContext();
   document.getElementById('loading').style.display = 'none';
+  // Check for celebration param (arriving from CS-11 onboarding)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('celebrate') === 'true') {
+    setTimeout(launchConfetti, 400);
+    // Clean the URL without reloading
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 });
 
 async function sbQuery(table, params = '') {
@@ -740,6 +798,8 @@ async function writeSessionReceipt(fields) {
 }
 
 async function processReceiptBlock(text) {
+  // Strip [NORTH_STAR_COMPLETE] trigger before any display
+  text = text.replace(/\[NORTH_STAR_COMPLETE\]/g, '').trim();
   const start = text.indexOf('%%RECEIPT%%');
   const end = text.indexOf('%%END_RECEIPT%%');
   if (start === -1 || end === -1 || end < start) return { displayText: text, receiptNumber: null };
@@ -795,6 +855,7 @@ function renderMarkdown(text) {
   let out = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   out = out.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
   out = out.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_self">$1</a>');
   out = out.replace(/^---$/gm,'<hr>');
   out = out.replace(/^(\d+)\.\s+(.+)$/gm,'<li value="$1">$2</li>');
   out = out.replace(/^[-*]\s+(.+)$/gm,'<li>$1</li>');
