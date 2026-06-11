@@ -30,7 +30,6 @@
       overflow: hidden;
     }
 
-    /* ── SIDEBAR ─────────────────────────────────────────────── */
     .sidebar {
       width: var(--sidebar-w);
       background: var(--surface);
@@ -86,12 +85,27 @@
       cursor: pointer;
     }
 
-    /* ── MAIN ────────────────────────────────────────────────── */
+    .nav-btn.locked { opacity: 0.4; cursor: not-allowed; }
+    .nav-btn.locked:hover { background: none; color: var(--muted); }
+
+    .op-card {
+      display: none;
+      padding: 8px 24px;
+      background: var(--gold-bg);
+      border-bottom: 1px solid #e8d89a;
+      font-size: 12px;
+    }
+    .op-card.visible { display: block; }
+    .op-card-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--gold); margin-bottom: 2px;
+    }
+    .op-card-value { font-size: 12px; color: var(--text); line-height: 1.4; }
+
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
     .view.active { display: flex; }
 
-    /* ── HOME VIEW ───────────────────────────────────────────── */
     .home-wrap {
       flex: 1;
       overflow-y: auto;
@@ -111,7 +125,6 @@
     .home-greeting .name { color: var(--gold); }
     .home-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
 
-    /* Prompt chips */
     .chips-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -133,7 +146,6 @@
     .chip-card-text { font-size: 13px; color: var(--text2); line-height: 1.4; }
     .chip-card svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* Home input */
     .home-input-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -175,7 +187,6 @@
     .send-btn:hover { background: var(--gold-light); }
     .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-    /* context cards strip */
     .context-strip {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -193,7 +204,6 @@
     .ctx-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
     .ctx-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
-    /* ── CHAT VIEW ───────────────────────────────────────────── */
     .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .chat-header {
       padding: 14px 24px;
@@ -306,14 +316,12 @@
     .chat-input::placeholder { color: var(--muted); }
     .chat-input-row { display: flex; justify-content: flex-end; }
 
-    /* History */
     .hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
     .badge-gold { background: #fdf8ee; color: var(--gold); }
     .badge-green { background: #f0fdf4; color: #16a34a; }
     .badge-gray { background: #f5f5f5; color: #888; }
 
-    /* ── ACCOUNT VIEW ─────────────────────────────────────────── */
     .account-wrap {
       flex: 1;
       overflow-y: auto;
@@ -323,85 +331,35 @@
       padding: 60px 24px 60px;
     }
     .account-inner { width: 100%; max-width: 560px; }
-    .account-title {
-      font-size: 22px; font-weight: 700; color: var(--text);
-      margin-bottom: 4px;
-    }
+    .account-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .account-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
-
-    .account-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      margin-bottom: 16px;
-      overflow: hidden;
-    }
-    .account-section-header {
-      padding: 14px 20px 10px;
-      border-bottom: 1px solid var(--border);
-    }
-    .account-section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; color: var(--muted);
-    }
-
-    .account-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-    }
+    .account-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 16px; overflow: hidden; }
+    .account-section-header { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); }
+    .account-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .account-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
     .account-row:last-child { border-bottom: none; }
-    .account-row-label {
-      font-size: 12px; color: var(--muted); margin-bottom: 3px;
-      text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600;
-    }
-    .account-row-value {
-      font-size: 14px; font-weight: 500; color: var(--text);
-    }
+    .account-row-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+    .account-row-value { font-size: 14px; font-weight: 500; color: var(--text); }
     .account-row-value.muted { color: var(--muted); font-weight: 400; font-style: italic; }
-
-    /* Documents list */
-    .doc-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 20px;
-      border-bottom: 1px solid var(--border);
-    }
+    .doc-item { display: flex; align-items: center; gap: 12px; padding: 13px 20px; border-bottom: 1px solid var(--border); }
     .doc-item:last-child { border-bottom: none; }
-    .doc-icon {
-      width: 32px; height: 32px; flex-shrink: 0;
-      background: var(--gold-bg);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--gold);
-    }
+    .doc-icon { width: 32px; height: 32px; flex-shrink: 0; background: var(--gold-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gold); }
     .doc-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .doc-name { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
     .doc-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .doc-empty { padding: 28px 20px; text-align: center; color: var(--muted); font-size: 13px; }
-
-    /* Help + support */
-    .help-link {
-      display: flex; align-items: center; gap: 10px;
-      padding: 14px 20px;
-      font-size: 14px; font-weight: 500; color: var(--text);
-      text-decoration: none;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-      cursor: pointer;
-    }
+    .help-link { display: flex; align-items: center; gap: 10px; padding: 14px 20px; font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
     .help-link:last-child { border-bottom: none; }
     .help-link:hover { background: var(--surface2); }
     .help-link svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
     .help-link .link-arrow { margin-left: auto; color: var(--muted); }
 
-    /* Loading */
     .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 999; }
     .loading-logo { width: 48px; height: 48px; background: var(--text); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
     .loading-logo svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; }
     .loading-text { font-size: 13px; color: var(--muted); }
     .loading-spinner { width: 22px; height: 22px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -417,27 +375,26 @@
   <div class="loading-text">Loading your operating system…</div>
 </div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo">
     <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
   </div>
-
   <div class="nav-btn active" id="nav-home" onclick="switchView('home')">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <div class="tooltip">Home</div>
   </div>
-
   <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <div class="tooltip">Daily Brief</div>
   </div>
-
   <div class="nav-btn" id="nav-history" onclick="switchView('history')">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     <div class="tooltip">Session History</div>
   </div>
-
+  <div class="nav-btn locked" id="nav-coaching" onclick="handleCoachingClick()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <div class="tooltip">Gold Tier</div>
+  </div>
   <div class="sidebar-bottom">
     <div class="nav-btn" id="nav-account" onclick="switchView('account')">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -447,169 +404,89 @@
   </div>
 </nav>
 
-<!-- MAIN -->
 <main class="main">
 
-  <!-- HOME VIEW -->
   <div class="view active" id="view-home">
     <div class="home-wrap">
       <div class="home-inner">
-
-        <div class="home-greeting">
-          Hi there, <span class="name" id="user-first-name-home">—</span>
-        </div>
-        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 6px;">
-          What would you like to work on?
-        </div>
+        <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
+        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 6px;">What would you like to work on?</div>
         <div class="home-sub">Use one of your common prompts below, or start with your own.</div>
-
         <div class="context-strip" id="ctx-strip" style="display:none;">
-          <div class="ctx-card" id="ctx-pro">
-            <div class="ctx-label">Professional Focus</div>
-            <div class="ctx-value" id="ctx-pro-val">—</div>
-          </div>
-          <div class="ctx-card" id="ctx-per">
-            <div class="ctx-label">Personal Focus</div>
-            <div class="ctx-value" id="ctx-per-val">—</div>
-          </div>
-          <div class="ctx-card full" id="ctx-last" style="display:none;">
-            <div class="ctx-label">Last Session</div>
-            <div class="ctx-value" id="ctx-last-val">—</div>
-            <div class="ctx-sub" id="ctx-last-date">—</div>
-          </div>
+          <div class="ctx-card" id="ctx-pro"><div class="ctx-label">Professional Focus</div><div class="ctx-value" id="ctx-pro-val">—</div></div>
+          <div class="ctx-card" id="ctx-per"><div class="ctx-label">Personal Focus</div><div class="ctx-value" id="ctx-per-val">—</div></div>
+          <div class="ctx-card full" id="ctx-last" style="display:none;"><div class="ctx-label">Last Session</div><div class="ctx-value" id="ctx-last-val">—</div><div class="ctx-sub" id="ctx-last-date">—</div></div>
         </div>
-
         <div class="chips-grid">
-          <div class="chip-card" onclick="sendFromChip('Give me my brief')">
-            <div class="chip-card-text">Give me my North Star brief for today</div>
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <div class="chip-card" onclick="sendFromChip('Where am I in the quarter?')">
-            <div class="chip-card-text">Where am I in the quarter?</div>
-            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          </div>
-          <div class="chip-card" onclick="sendFromChip('What did I accomplish recently?')">
-            <div class="chip-card-text">What did I accomplish recently?</div>
-            <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          </div>
-          <div class="chip-card" onclick="sendFromChip('What is my watch-out this quarter?')">
-            <div class="chip-card-text">What is my watch-out this quarter?</div>
-            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          </div>
+          <div class="chip-card" onclick="sendFromChip('Give me my brief')"><div class="chip-card-text">Give me my North Star brief for today</div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="chip-card" onclick="sendFromChip('Where am I in the quarter?')"><div class="chip-card-text">Where am I in the quarter?</div><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <div class="chip-card" onclick="sendFromChip('What did I accomplish recently?')"><div class="chip-card-text">What did I accomplish recently?</div><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <div class="chip-card" onclick="sendFromChip('What is my watch-out this quarter?')"><div class="chip-card-text">What is my watch-out this quarter?</div><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         </div>
-
         <div class="home-input-wrap">
-          <textarea class="home-input" id="home-input" placeholder="Ask whatever you want…" rows="2"
-            onkeydown="handleHomeKey(event)" oninput="autoResize(this)"></textarea>
-          <div class="home-input-footer">
-            <button class="send-btn" id="home-send-btn" onclick="sendFromHome()">
-              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
+          <textarea class="home-input" id="home-input" placeholder="Ask whatever you want…" rows="2" onkeydown="handleHomeKey(event)" oninput="autoResize(this)"></textarea>
+          <div class="home-input-footer"><button class="send-btn" id="home-send-btn" onclick="sendFromHome()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
-
       </div>
     </div>
   </div>
 
-  <!-- CHAT VIEW -->
   <div class="view" id="view-chat">
     <div class="chat-wrap">
       <div class="chat-header">
         <div class="chat-header-icon">✦</div>
-        <div>
-          <div class="chat-header-title">Daily Brief</div>
-          <div class="chat-header-sub">Chief of Staff — direct line ✓</div>
-        </div>
+        <div><div class="chat-header-title">Daily Brief</div><div class="chat-header-sub">Chief of Staff — direct line ✓</div></div>
+      </div>
+      <div class="op-card" id="op-summary-card">
+        <div class="op-card-label">Your North Star</div>
+        <div class="op-card-value" id="op-summary-text">—</div>
       </div>
       <div class="messages" id="messages"></div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1"
-            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-          <div class="chat-input-row">
-            <button class="send-btn" id="send-btn" onclick="sendMessage()">
-              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
+          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <div class="chat-input-row"><button class="send-btn" id="send-btn" onclick="sendMessage()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- HISTORY VIEW -->
   <div class="view" id="view-history">
-    <div class="home-wrap">
-      <div class="home-inner">
-        <div class="home-greeting" style="font-size:22px; margin-bottom:4px;">Session History</div>
-        <div class="home-sub" style="margin-bottom:24px;">Your recent sessions</div>
-        <div id="history-list"><div style="color:var(--muted);text-align:center;padding:40px;">Loading…</div></div>
-      </div>
-    </div>
+    <div class="home-wrap"><div class="home-inner">
+      <div class="home-greeting" style="font-size:22px; margin-bottom:4px;">Session History</div>
+      <div class="home-sub" style="margin-bottom:24px;">Your recent sessions</div>
+      <div id="history-list"><div style="color:var(--muted);text-align:center;padding:40px;">Loading…</div></div>
+    </div></div>
   </div>
 
-  <!-- ACCOUNT VIEW -->
   <div class="view" id="view-account">
-    <div class="account-wrap">
-      <div class="account-inner">
-
-        <div class="account-title">Account</div>
-        <div class="account-sub">Your profile and settings</div>
-
-        <!-- Profile info -->
-        <div class="account-section">
-          <div class="account-section-header">
-            <div class="account-section-title">Profile</div>
-          </div>
-          <div class="account-row">
-            <div>
-              <div class="account-row-label">Name</div>
-              <div class="account-row-value" id="acct-name">—</div>
-            </div>
-          </div>
-          <div class="account-row">
-            <div>
-              <div class="account-row-label">Email</div>
-              <div class="account-row-value" id="acct-email">—</div>
-            </div>
-          </div>
-          <div class="account-row">
-            <div>
-              <div class="account-row-label">Plan</div>
-              <div class="account-row-value">Chief of Staff</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Uploaded documents -->
-        <div class="account-section">
-          <div class="account-section-header">
-            <div class="account-section-title">Your Documents</div>
-          </div>
-          <div id="acct-docs-list">
-            <div class="doc-empty">Loading documents…</div>
-          </div>
-        </div>
-
-        <!-- Help & Support -->
-        <div class="account-section">
-          <div class="account-section-header">
-            <div class="account-section-title">Help &amp; Support</div>
-          </div>
-          <a class="help-link" href="mailto:support@covetedconsultant.com?subject=North Star OS — Support">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Get help
-            <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <div class="help-link" onclick="logout()">
-            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign out
-            <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        </div>
-
+    <div class="account-wrap"><div class="account-inner">
+      <div class="account-title">Account</div>
+      <div class="account-sub">Your profile and settings</div>
+      <div class="account-section">
+        <div class="account-section-header"><div class="account-section-title">Profile</div></div>
+        <div class="account-row"><div><div class="account-row-label">Name</div><div class="account-row-value" id="acct-name">—</div></div></div>
+        <div class="account-row"><div><div class="account-row-label">Email</div><div class="account-row-value" id="acct-email">—</div></div></div>
+        <div class="account-row"><div><div class="account-row-label">Plan</div><div class="account-row-value" id="acct-plan">Chief of Staff</div></div></div>
       </div>
-    </div>
+      <div class="account-section">
+        <div class="account-section-header"><div class="account-section-title">Your Documents</div></div>
+        <div id="acct-docs-list"><div class="doc-empty">Loading documents…</div></div>
+      </div>
+      <div class="account-section">
+        <div class="account-section-header"><div class="account-section-title">Help &amp; Support</div></div>
+        <a class="help-link" href="mailto:support@covetedconsultant.com?subject=North Star OS — Support">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Get help
+          <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <div class="help-link" onclick="logout()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+          <svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div></div>
   </div>
 
 </main>
@@ -618,7 +495,6 @@
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
 const API_ENDPOINT = '/api/chat';
-
 let session = null;
 let userProfile = null;
 let chatHistory = [];
@@ -651,19 +527,29 @@ async function sbInsert(table, payload) {
 }
 
 async function loadProfile(email, userId) {
-  const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email&limit=1`);
-  userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0] };
-  const name = userProfile?.display_name || '';
-  const firstName = name.split(' ')[0];
+  const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email,tier&limit=1`);
+  userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0], tier: 1 };
+  const firstName = (userProfile?.display_name || '').split(' ')[0];
   document.getElementById('user-first-name-home').textContent = firstName;
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
   document.getElementById('acct-name').textContent = userProfile?.display_name || '—';
   document.getElementById('acct-email').textContent = userProfile?.email || email;
+  const tier = userProfile?.tier || 1;
+  const coachingBtn = document.getElementById('nav-coaching');
+  if (tier >= 3) { coachingBtn.classList.remove('locked'); coachingBtn.onclick = () => switchView('coaching'); }
+  const planEl = document.getElementById('acct-plan');
+  if (planEl) planEl.textContent = tier >= 3 ? 'Chief of Staff — Gold' : 'Chief of Staff';
 }
 
 async function loadHomeContext() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
+  const aopRows = await sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival&order=created_at.desc&limit=1`);
+  const aop = aopRows?.[0];
+  if (aop?.annual_arrival) {
+    document.getElementById('op-summary-text').textContent = aop.annual_arrival;
+    document.getElementById('op-summary-card').classList.add('visible');
+  }
   const [quarterly, receipts] = await Promise.all([
     sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal&order=created_at.desc&limit=1`),
     sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,completion_status&order=session_date.desc&limit=1`),
@@ -688,50 +574,30 @@ async function loadHomeContext() {
 function loadHistory(receipts) {
   const el = document.getElementById('history-list');
   if (!receipts.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;">No sessions yet.</div>'; return; }
-  el.innerHTML = receipts.map(r => `
-    <div class="hist-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);">${formatDate(r.session_date)}</div>
-        ${r.completion_status ? `<span class="badge badge-${r.completion_status === 'gold' ? 'gold' : r.completion_status === 'silver' ? 'gray' : 'green'}">${r.completion_status}</span>` : ''}
-      </div>
-      <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(r.bronze_task || '—')}</div>
-    </div>
-  `).join('');
+  el.innerHTML = receipts.map(r => `<div class="hist-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);">${formatDate(r.session_date)}</div>${r.completion_status ? `<span class="badge badge-${r.completion_status === 'gold' ? 'gold' : r.completion_status === 'silver' ? 'gray' : 'green'}">${r.completion_status}</span>` : ''}</div><div style="font-size:13px;font-weight:600;color:var(--text);">${esc(r.bronze_task || '—')}</div></div>`).join('');
 }
 
 async function loadDocuments(uid) {
-  const el = document.getElementById('acct-docs-list');
-  el.innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>';
+  document.getElementById('acct-docs-list').innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>';
 }
 
 function switchView(name) {
-  const views = ['home', 'chat', 'history', 'account'];
-  views.forEach(v => {
-    document.getElementById('view-' + v).classList.toggle('active', v === name);
+  ['home','chat','history','account','coaching'].forEach(v => {
+    const viewEl = document.getElementById('view-' + v);
+    if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v);
-    if (nb) nb.classList.toggle('active', v === name);
+    if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
 }
 
-function sendFromChip(text) {
-  switchView('chat');
-  setTimeout(() => {
-    document.getElementById('chat-input').value = text;
-    sendMessage();
-  }, 50);
+function handleCoachingClick() {
+  const tier = userProfile?.tier || 1;
+  if (tier >= 3) { switchView('coaching'); return; }
+  alert('The Gold Tier is available for coaching clients.\nContact support@covetedconsultant.com to upgrade.');
 }
 
-function sendFromHome() {
-  const text = document.getElementById('home-input').value.trim();
-  if (!text) return;
-  document.getElementById('home-input').value = '';
-  switchView('chat');
-  setTimeout(() => {
-    document.getElementById('chat-input').value = text;
-    sendMessage();
-  }, 50);
-}
-
+function sendFromChip(text) { switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage(); }, 50); }
+function sendFromHome() { const text = document.getElementById('home-input').value.trim(); if (!text) return; document.getElementById('home-input').value = ''; switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage(); }, 50); }
 function handleHomeKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromHome(); } }
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
@@ -742,10 +608,7 @@ async function generateReceiptNumber() {
   const dateStr = y + m + d;
   const rows = await sbQuery('session_receipts', `receipt_number=like.NSR-${dateStr}-%25&select=receipt_number&order=receipt_number.desc&limit=1`);
   let seq = 1;
-  if (rows && rows.length > 0 && rows[0].receipt_number) {
-    const parts = rows[0].receipt_number.split('-');
-    seq = parseInt(parts[parts.length - 1], 10) + 1;
-  }
+  if (rows && rows.length > 0 && rows[0].receipt_number) { const parts = rows[0].receipt_number.split('-'); seq = parseInt(parts[parts.length - 1], 10) + 1; }
   return `NSR-${dateStr}-${String(seq).padStart(3, '0')}`;
 }
 
@@ -753,14 +616,7 @@ async function writeSessionReceipt(fields) {
   if (!userProfile?.id) throw new Error('No user profile');
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const receiptNumber = await generateReceiptNumber();
-  const payload = {
-    user_id: userProfile.id, session_date: today, room_id: 'north-star-room',
-    receipt_number: receiptNumber, session_scope: fields.session_scope || null,
-    bronze_task: fields.bronze_task || null, bronze_status: fields.bronze_status || null,
-    completion_status: fields.completion_status || 'bronze', trigger_context: fields.trigger_context || 'daily_work',
-    outcome_type: fields.outcome_type || null, thread_tag: fields.thread_tag || null,
-    rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff', carried_forward: fields.carried_forward || null
-  };
+  const payload = { user_id: userProfile.id, session_date: today, room_id: 'north-star-room', receipt_number: receiptNumber, session_scope: fields.session_scope || null, bronze_task: fields.bronze_task || null, bronze_status: fields.bronze_status || null, completion_status: fields.completion_status || 'bronze', trigger_context: fields.trigger_context || 'daily_work', outcome_type: fields.outcome_type || null, thread_tag: fields.thread_tag || null, rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff', carried_forward: fields.carried_forward || null };
   const rows = await sbInsert('session_receipts', payload);
   return { receiptNumber, row: rows?.[0] || null };
 }
@@ -772,12 +628,7 @@ async function processReceiptBlock(text) {
   const jsonStr = text.slice(start + '%%RECEIPT%%'.length, end).trim();
   let displayText = (text.slice(0, start) + text.slice(end + '%%END_RECEIPT%%'.length)).trim();
   let receiptNumber = null;
-  try {
-    const fields = JSON.parse(jsonStr);
-    const result = await writeSessionReceipt(fields);
-    receiptNumber = result.receiptNumber;
-    displayText = displayText.replace(/Session closed\..*$/m, `Session closed. ${receiptNumber}`);
-  } catch (err) { console.error('Receipt write failed:', err); }
+  try { const fields = JSON.parse(jsonStr); const result = await writeSessionReceipt(fields); receiptNumber = result.receiptNumber; displayText = displayText.replace(/Session closed\..*$/m, `Session closed. ${receiptNumber}`); } catch (err) { console.error('Receipt write failed:', err); }
   return { displayText, receiptNumber };
 }
 
@@ -793,11 +644,7 @@ async function sendMessage() {
   const typingEl = appendTyping();
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatHistory, context, userId: userProfile?.id, userName: userProfile?.display_name })
-    });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistory, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -806,11 +653,7 @@ async function sendMessage() {
     appendMessage('assistant', displayText);
     chatHistory.push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
-  } catch (err) {
-    typingEl.remove();
-    appendMessage('assistant', 'Connection error. Please try again.');
-    console.error(err);
-  }
+  } catch (err) { typingEl.remove(); appendMessage('assistant', 'Connection error. Please try again.'); console.error(err); }
   sendBtn.disabled = false;
   input.focus();
 }
@@ -824,13 +667,7 @@ async function buildContext() {
     sbQuery('session_receipts', `user_id=eq.${uid}&select=*&order=session_date.desc&limit=10`),
     sbQuery('parking_lot', `user_id=eq.${uid}&status=eq.open&select=item,due_date,why&order=created_at.desc&limit=5`),
   ]);
-  return {
-    annual_operating_picture: aop?.[0] || null,
-    quarterly_dashboard: quarterly?.[0] || null,
-    recent_sessions: receipts || [],
-    open_parking_lot: parking || [],
-    user: { id: uid, display_name: userProfile?.display_name || '' }
-  };
+  return { annual_operating_picture: aop?.[0] || null, quarterly_dashboard: quarterly?.[0] || null, recent_sessions: receipts || [], open_parking_lot: parking || [], user: { id: uid, display_name: userProfile?.display_name || '' } };
 }
 
 function renderMarkdown(text) {
@@ -854,51 +691,30 @@ function appendMessage(role, text) {
   const div = document.createElement('div');
   div.className = `msg ${role}`;
   if (role === 'assistant') {
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble';
-    bubble.innerHTML = renderMarkdown(text);
-    const actionsEl = document.createElement('div');
-    actionsEl.className = 'msg-actions';
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.title = 'Copy to clipboard';
-    copyBtn.innerHTML = ICON_COPY;
+    const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.innerHTML = renderMarkdown(text);
+    const actionsEl = document.createElement('div'); actionsEl.className = 'msg-actions';
+    const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.title = 'Copy to clipboard'; copyBtn.innerHTML = ICON_COPY;
     copyBtn.addEventListener('click', () => {
       const plainText = bubble.innerText || bubble.textContent || '';
-      navigator.clipboard.writeText(plainText).then(() => {
-        copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK;
-        setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500);
-      }).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = plainText; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-        copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK;
-        setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500);
-      });
+      navigator.clipboard.writeText(plainText).then(() => { copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); }).catch(() => { const ta = document.createElement('textarea'); ta.value = plainText; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); });
     });
     actionsEl.appendChild(copyBtn);
-    const timeEl = document.createElement('div');
-    timeEl.className = 'msg-time'; timeEl.textContent = time;
+    const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
     div.appendChild(bubble); div.appendChild(actionsEl); div.appendChild(timeEl);
   } else {
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble'; bubble.textContent = text;
-    const timeEl = document.createElement('div');
-    timeEl.className = 'msg-time'; timeEl.textContent = time;
+    const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.textContent = text;
+    const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
     div.appendChild(bubble); div.appendChild(timeEl);
   }
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
   return div;
 }
 
 function appendTyping() {
   const msgs = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'msg assistant';
+  const div = document.createElement('div'); div.className = 'msg assistant';
   div.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
   return div;
 }
 
