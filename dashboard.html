@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11d -->
+  <!-- cache-bust: 2026-06-11e -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -74,16 +74,12 @@
     .view.active { display: flex; }
 
     /* HOME */
-    .home-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 80px 24px 40px; }
+    .home-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 56px 24px 60px; }
     .home-inner { width: 100%; max-width: 680px; }
+
+    /* State 0 */
     .home-greeting { font-size: 36px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; color: var(--text); }
     .home-greeting .name { color: var(--gold); }
-    .context-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
-    .ctx-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
-    .ctx-card.full { grid-column: 1 / -1; }
-    .ctx-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
-    .ctx-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
-    .ctx-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
     .home-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 12px; }
     .nav-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
     .nav-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 18px 18px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 12px; }
@@ -95,6 +91,28 @@
     .dashboard-placeholder-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
     .dashboard-placeholder-text { font-size: 13px; line-height: 1.6; }
 
+    /* State 1 */
+    .state1-greeting { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 4px; color: var(--text); }
+    .state1-greeting .name { color: var(--gold); }
+    .state1-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+    .s1-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 10px; margin-top: 24px; }
+    .s1-section-label:first-of-type { margin-top: 0; }
+    .destination-card { background: var(--gold-bg); border: 1px solid #e8d89a; border-radius: 14px; padding: 20px 22px; }
+    .destination-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold); margin-bottom: 8px; }
+    .destination-value { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.65; }
+    .s1-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+    .s1-card-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 7px; }
+    .s1-card-value { font-size: 13px; color: var(--text); line-height: 1.6; }
+    .s1-card-value.large { font-size: 20px; font-weight: 600; }
+    .s1-revenue-badge { display: inline-block; background: #eef6ee; border: 1px solid #c3dfc3; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #2e6b2e; margin-top: 6px; }
+    .s1-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .scoreboard-dormant { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 20px 18px; display: flex; align-items: center; gap: 16px; }
+    .scoreboard-slots { display: flex; gap: 7px; flex-shrink: 0; }
+    .scoreboard-slot { width: 32px; height: 32px; border-radius: 7px; background: var(--surface2); border: 1px dashed var(--border); }
+    .scoreboard-text { flex: 1; }
+    .scoreboard-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .scoreboard-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
     /* CHAT LAYOUT */
     .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
     .chat-header { padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -102,7 +120,6 @@
     .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text); }
     .chat-header-sub { font-size: 11px; color: var(--muted); }
 
-    /* FIX: messages container must have min-height:0 and flex:1 to scroll within flex parent */
     .messages { flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 32px; display: flex; flex-direction: column; }
 
     .chat-greeting { width: 100%; padding: 56px 0 36px; text-align: center; flex-shrink: 0; }
@@ -148,7 +165,6 @@
     .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; flex-shrink: 0; }
     .chat-input-wrap { width: 100%; max-width: 660px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: border 0.15s; }
     .chat-input-wrap:focus-within { border-color: var(--gold); }
-    /* FIX: min-height ensures textarea starts at one line height */
     .chat-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: inherit; resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; overflow-y: hidden; }
     .chat-input::placeholder { color: var(--muted); }
     .chat-input-row { display: flex; justify-content: flex-end; }
@@ -170,7 +186,6 @@
     .account-row-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
     .account-row-value { font-size: 14px; font-weight: 500; color: var(--text); }
     .account-row-value.muted { color: var(--muted); font-weight: 400; font-style: italic; }
-    /* Editable name field */
     .name-edit-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
     .name-input { font-size: 14px; font-weight: 500; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; background: var(--surface2); outline: none; flex: 1; font-family: inherit; }
     .name-input:focus { border-color: var(--gold); background: var(--surface); }
@@ -243,32 +258,89 @@
   <div class="view active" id="view-home">
     <div class="home-wrap">
       <div class="home-inner">
-        <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
-        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 24px;">What would you like to work on?</div>
-        <div class="context-strip" id="ctx-strip" style="display:none;">
-          <div class="ctx-card" id="ctx-pro"><div class="ctx-label">Professional Focus</div><div class="ctx-value" id="ctx-pro-val">—</div></div>
-          <div class="ctx-card" id="ctx-per"><div class="ctx-label">Personal Focus</div><div class="ctx-value" id="ctx-per-val">—</div></div>
-          <div class="ctx-card full" id="ctx-last" style="display:none;"><div class="ctx-label">Last Session</div><div class="ctx-value" id="ctx-last-val">—</div><div class="ctx-sub" id="ctx-last-date">—</div></div>
-        </div>
-        <div class="home-section-label">Start a conversation</div>
-        <div class="nav-cards-grid">
-          <div class="nav-card" onclick="switchView('setup')">
-            <div class="nav-card-icon">⚙️</div>
-            <div><div class="nav-card-title">Your Setup</div><div class="nav-card-desc">Build or update your operating picture.</div></div>
+
+        <!-- STATE 0: No AOP -->
+        <div id="home-state0">
+          <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
+          <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 24px;">What would you like to work on?</div>
+          <div class="home-section-label">Start a conversation</div>
+          <div class="nav-cards-grid">
+            <div class="nav-card" onclick="switchView('setup')">
+              <div class="nav-card-icon">⚙️</div>
+              <div><div class="nav-card-title">Your Setup</div><div class="nav-card-desc">Build or update your operating picture.</div></div>
+            </div>
+            <div class="nav-card" onclick="switchView('chat')">
+              <div class="nav-card-icon">✦</div>
+              <div><div class="nav-card-title">Daily Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div>
+            </div>
+            <div class="nav-card" onclick="switchView('prep')">
+              <div class="nav-card-icon">📖</div>
+              <div><div class="nav-card-title">Prep Room</div><div class="nav-card-desc">Prepare for what's ahead.</div></div>
+            </div>
           </div>
-          <div class="nav-card" onclick="switchView('chat')">
-            <div class="nav-card-icon">✦</div>
-            <div><div class="nav-card-title">Daily Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div>
-          </div>
-          <div class="nav-card" onclick="switchView('prep')">
-            <div class="nav-card-icon">📖</div>
-            <div><div class="nav-card-title">Prep Room</div><div class="nav-card-desc">Prepare for what's ahead.</div></div>
+          <div class="dashboard-placeholder">
+            <div class="dashboard-placeholder-label">Dashboard</div>
+            <div class="dashboard-placeholder-text">Your key metrics and progress will appear here as your operating picture develops.</div>
           </div>
         </div>
-        <div class="dashboard-placeholder">
-          <div class="dashboard-placeholder-label">Dashboard</div>
-          <div class="dashboard-placeholder-text">Your key metrics and progress will appear here as your operating picture develops.</div>
+
+        <!-- STATE 1: Has AOP, no scoreboard -->
+        <div id="home-state1" style="display:none;">
+          <div class="state1-greeting">Your North Star is live, <span class="name" id="user-first-name-state1">—</span></div>
+          <div class="state1-subtitle">Here's your operating picture.</div>
+
+          <div class="s1-section-label">Your destination</div>
+          <div class="destination-card">
+            <div class="destination-label">Annual arrival</div>
+            <div class="destination-value" id="s1-arrival">—</div>
+          </div>
+
+          <div class="s1-section-label" style="margin-top:20px;">Your operating picture</div>
+          <div class="s1-grid-2" style="margin-bottom:12px;">
+            <div class="s1-card">
+              <div class="s1-card-label">Mission</div>
+              <div class="s1-card-value" id="s1-mission">—</div>
+            </div>
+            <div class="s1-card">
+              <div class="s1-card-label">Revenue target</div>
+              <div class="s1-card-value large" id="s1-revenue">—</div>
+              <div class="s1-revenue-badge">floor · this year</div>
+            </div>
+          </div>
+
+          <div class="s1-section-label">What you've built</div>
+          <div class="s1-card" style="margin-bottom:12px;">
+            <div class="s1-card-label">Best client result</div>
+            <div class="s1-card-value" id="s1-best-result">—</div>
+          </div>
+
+          <div class="s1-grid-2" style="margin-bottom:24px;">
+            <div class="s1-card">
+              <div class="s1-card-label">Pattern to watch</div>
+              <div class="s1-card-value" id="s1-pattern">—</div>
+            </div>
+            <div class="s1-card">
+              <div class="s1-card-label">First focus this week</div>
+              <div class="s1-card-value" id="s1-first-focus">—</div>
+            </div>
+          </div>
+
+          <div class="s1-section-label">Scoreboard</div>
+          <div class="scoreboard-dormant">
+            <div class="scoreboard-slots">
+              <div class="scoreboard-slot"></div>
+              <div class="scoreboard-slot"></div>
+              <div class="scoreboard-slot"></div>
+              <div class="scoreboard-slot"></div>
+              <div class="scoreboard-slot"></div>
+            </div>
+            <div class="scoreboard-text">
+              <div class="scoreboard-title">Client scoreboard</div>
+              <div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -391,7 +463,6 @@ let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [] };
 
-/* ── CONFETTI ─────────────────────────────────────────────────────────── */
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -420,7 +491,6 @@ function launchConfetti() {
   }
   draw();
 }
-/* ─────────────────────────────────────────────────────────────────────── */
 
 window.addEventListener('DOMContentLoaded', async () => {
   const email = localStorage.getItem('ns_email');
@@ -466,7 +536,7 @@ async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email,tier&limit=1`);
   userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0], tier: 1 };
   const firstName = (userProfile?.display_name || '').split(' ')[0];
-  ['user-first-name-home','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
+  ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = firstName;
   });
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
@@ -491,7 +561,7 @@ async function saveName() {
     await sbPatch('profiles', `id=eq.${userProfile.id}`, { display_name: newName });
     userProfile.display_name = newName;
     const firstName = newName.split(' ')[0];
-    ['user-first-name-home','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
+    ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
       const el = document.getElementById(id); if (el) el.textContent = firstName;
     });
     document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
@@ -504,28 +574,48 @@ async function saveName() {
 async function loadHomeContext() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
-  const aopRows = await sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival&order=created_at.desc&limit=1`);
+
+  const aopRows = await sbQuery('annual_operating_picture',
+    `user_id=eq.${uid}&select=annual_arrival,mission_statement,revenue_floor_bronze,gold_standard_business_picture,limiting_belief_raw,first_focus&order=created_at.desc&limit=1`
+  );
   const aop = aopRows?.[0];
+
   if (aop?.annual_arrival) {
     ['op-summary-text', 'op-summary-text-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = aop.annual_arrival; });
     ['op-summary-card', 'op-summary-card-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('visible'); });
   }
-  const [quarterly, receipts] = await Promise.all([
-    sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal&order=created_at.desc&limit=1`),
-    sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,completion_status&order=session_date.desc&limit=1`),
-  ]);
-  const q = quarterly?.[0]; const last = receipts?.[0];
-  if (q?.quarterly_focus_professional) {
-    document.getElementById('ctx-pro-val').textContent = q.quarterly_focus_professional;
-    document.getElementById('ctx-per-val').textContent = q.quarterly_focus_personal || '—';
-    document.getElementById('ctx-strip').style.display = 'grid';
+
+  if (aop) {
+    document.getElementById('home-state0').style.display = 'none';
+    document.getElementById('home-state1').style.display = 'block';
+
+    setText('s1-arrival', aop.annual_arrival);
+    setText('s1-mission', aop.mission_statement);
+
+    if (aop.revenue_floor_bronze) {
+      const rev = parseFloat(aop.revenue_floor_bronze);
+      document.getElementById('s1-revenue').textContent = isNaN(rev) ? aop.revenue_floor_bronze : '$' + rev.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+
+    if (aop.gold_standard_business_picture) {
+      let bestResult = aop.gold_standard_business_picture;
+      try {
+        const parsed = typeof bestResult === 'string' ? JSON.parse(bestResult) : bestResult;
+        bestResult = parsed.case_study || parsed.proof || JSON.stringify(parsed);
+      } catch (e) { /* use raw string */ }
+      setText('s1-best-result', bestResult);
+    }
+
+    setText('s1-pattern', aop.limiting_belief_raw);
+    setText('s1-first-focus', aop.first_focus);
   }
-  if (last?.bronze_task) {
-    document.getElementById('ctx-last-val').textContent = last.bronze_task;
-    document.getElementById('ctx-last-date').textContent = formatDate(last.session_date);
-    document.getElementById('ctx-last').style.display = 'block';
-  }
+
   loadDocuments(uid);
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el && value) el.textContent = value;
 }
 
 async function loadDocuments(uid) {
