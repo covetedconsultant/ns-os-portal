@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11e -->
+  <!-- cache-bust: 2026-06-11f -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -112,6 +112,11 @@
     .scoreboard-text { flex: 1; }
     .scoreboard-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
     .scoreboard-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* State 1 — nav buttons */
+    .s1-nav-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 28px; }
+    .s1-nav-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: var(--text); transition: all 0.15s; line-height: 1.35; }
+    .s1-nav-btn:hover { border-color: var(--gold); background: var(--gold-bg); color: var(--gold); transform: translateY(-1px); box-shadow: 0 2px 10px rgba(184,134,11,0.1); }
 
     /* CHAT LAYOUT */
     .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
@@ -338,6 +343,12 @@
               <div class="scoreboard-title">Client scoreboard</div>
               <div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div>
             </div>
+          </div>
+
+          <div class="s1-nav-buttons">
+            <div class="s1-nav-btn" onclick="switchView('setup')">Start your setup</div>
+            <div class="s1-nav-btn" onclick="switchView('chat')">Do your daily work</div>
+            <div class="s1-nav-btn" onclick="switchView('prep')">Prep for the week / quarter</div>
           </div>
         </div>
 
