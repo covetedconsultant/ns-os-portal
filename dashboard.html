@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11 -->
+  <!-- cache-bust: 2026-06-11b -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -128,68 +128,6 @@
     .home-greeting .name { color: var(--gold); }
     .home-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
 
-    .chips-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .chip-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 18px 14px;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .chip-card:hover { border-color: var(--gold); box-shadow: 0 2px 8px rgba(184,134,11,0.08); }
-    .chip-card-text { font-size: 13px; color: var(--text2); line-height: 1.4; }
-    .chip-card svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-    .home-input-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 18px 12px;
-      margin-top: 12px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-      transition: border 0.15s;
-    }
-    .home-input-wrap:focus-within { border-color: var(--gold); }
-    .home-input {
-      width: 100%;
-      background: transparent;
-      border: none; outline: none;
-      font-size: 14px;
-      font-family: inherit;
-      color: var(--text);
-      resize: none;
-      line-height: 1.5;
-      min-height: 44px;
-      max-height: 120px;
-    }
-    .home-input::placeholder { color: var(--muted); }
-    .home-input-footer {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin-top: 10px;
-    }
-    .send-btn {
-      width: 34px; height: 34px;
-      background: var(--gold);
-      border: none; border-radius: 8px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-    }
-    .send-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .send-btn:hover { background: var(--gold-light); }
-    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
-
     .context-strip {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -206,6 +144,78 @@
     .ctx-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
     .ctx-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
     .ctx-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* HOME NAV CARDS */
+    .home-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .nav-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .nav-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 18px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .nav-card:hover {
+      border-color: var(--gold);
+      box-shadow: 0 2px 12px rgba(184,134,11,0.1);
+      transform: translateY(-1px);
+    }
+    .nav-card-icon {
+      width: 32px; height: 32px;
+      background: var(--gold-bg);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gold);
+      font-size: 16px;
+    }
+    .nav-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .nav-card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* HOME DASHBOARD PLACEHOLDER */
+    .dashboard-placeholder {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .dashboard-placeholder-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+    }
+    .dashboard-placeholder-text {
+      font-size: 13px;
+      line-height: 1.6;
+    }
 
     /* CHAT LAYOUT */
     .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -347,6 +357,17 @@
     }
     .chat-input::placeholder { color: var(--muted); }
     .chat-input-row { display: flex; justify-content: flex-end; }
+    .send-btn {
+      width: 34px; height: 34px;
+      background: var(--gold);
+      border: none; border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .send-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .send-btn:hover { background: var(--gold-light); }
+    .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
     /* ACCOUNT */
     .account-wrap {
@@ -436,23 +457,47 @@
     <div class="home-wrap">
       <div class="home-inner">
         <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
-        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 6px;">What would you like to work on?</div>
-        <div class="home-sub">Use one of your common prompts below, or start with your own.</div>
+        <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 24px;">What would you like to work on?</div>
+
+        <!-- Context strip (shown only if data exists) -->
         <div class="context-strip" id="ctx-strip" style="display:none;">
           <div class="ctx-card" id="ctx-pro"><div class="ctx-label">Professional Focus</div><div class="ctx-value" id="ctx-pro-val">—</div></div>
           <div class="ctx-card" id="ctx-per"><div class="ctx-label">Personal Focus</div><div class="ctx-value" id="ctx-per-val">—</div></div>
           <div class="ctx-card full" id="ctx-last" style="display:none;"><div class="ctx-label">Last Session</div><div class="ctx-value" id="ctx-last-val">—</div><div class="ctx-sub" id="ctx-last-date">—</div></div>
         </div>
-        <div class="chips-grid">
-          <div class="chip-card" onclick="sendFromChip('Give me my brief')"><div class="chip-card-text">Give me my North Star brief for today</div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="chip-card" onclick="sendFromChip('Where am I in the quarter?')"><div class="chip-card-text">Where am I in the quarter?</div><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-          <div class="chip-card" onclick="sendFromChip('What did I accomplish recently?')"><div class="chip-card-text">What did I accomplish recently?</div><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-          <div class="chip-card" onclick="sendFromChip('What is my watch-out this quarter?')"><div class="chip-card-text">What is my watch-out this quarter?</div><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+
+        <!-- Navigation cards -->
+        <div class="home-section-label">Start a conversation</div>
+        <div class="nav-cards-grid">
+          <div class="nav-card" onclick="switchView('setup')">
+            <div class="nav-card-icon">⚙️</div>
+            <div>
+              <div class="nav-card-title">Your Setup</div>
+              <div class="nav-card-desc">Build or update your operating picture.</div>
+            </div>
+          </div>
+          <div class="nav-card" onclick="switchView('chat')">
+            <div class="nav-card-icon">✦</div>
+            <div>
+              <div class="nav-card-title">Daily Brief</div>
+              <div class="nav-card-desc">Work through today with your Chief of Staff.</div>
+            </div>
+          </div>
+          <div class="nav-card" onclick="switchView('prep')">
+            <div class="nav-card-icon">📖</div>
+            <div>
+              <div class="nav-card-title">Prep Room</div>
+              <div class="nav-card-desc">Prepare for what’s ahead.</div>
+            </div>
+          </div>
         </div>
-        <div class="home-input-wrap">
-          <textarea class="home-input" id="home-input" placeholder="Ask whatever you want…" rows="2" onkeydown="handleHomeKey(event)" oninput="autoResize(this)"></textarea>
-          <div class="home-input-footer"><button class="send-btn" id="home-send-btn" onclick="sendFromHome()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+
+        <!-- Dashboard placeholder -->
+        <div class="dashboard-placeholder">
+          <div class="dashboard-placeholder-label">Dashboard</div>
+          <div class="dashboard-placeholder-text">Your key metrics and progress will appear here as your operating picture develops.</div>
         </div>
+
       </div>
     </div>
   </div>
@@ -471,12 +516,12 @@
       <div class="messages" id="messages-setup">
         <div class="chat-greeting">
           <div class="chat-greeting-line1">Getting to know you, <span class="name" id="greeting-name-setup">—</span>.</div>
-          <div class="chat-greeting-line2">Let's build your operating picture.</div>
+          <div class="chat-greeting-line2">Let’s build your operating picture.</div>
         </div>
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
+          <textarea class="chat-input" id="chat-input-setup" placeholder="Let’s build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-setup" onclick="sendMessage('setup')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
@@ -514,7 +559,7 @@
     <div class="chat-wrap">
       <div class="chat-header">
         <div class="chat-header-icon">📖</div>
-        <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what's ahead</div></div>
+        <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what’s ahead</div></div>
       </div>
       <div class="messages" id="messages-prep">
         <div class="chat-greeting">
@@ -670,9 +715,6 @@ function handleCoachingClick() {
   alert('The Gold Tier is available for coaching clients.\nContact support@covetedconsultant.com to upgrade.');
 }
 
-function sendFromChip(text) { switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage('chat'); }, 50); }
-function sendFromHome() { const text = document.getElementById('home-input').value.trim(); if (!text) return; document.getElementById('home-input').value = ''; switchView('chat'); setTimeout(() => { document.getElementById('chat-input').value = text; sendMessage('chat'); }, 50); }
-function handleHomeKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromHome(); } }
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('chat'); } }
 function handleKeySetup(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('setup'); } }
 function handleKeyPrep(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('prep'); } }
