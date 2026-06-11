@@ -1,8 +1,7 @@
 // netlify/functions/chat.js
-// Loads governing doc (chat-b) at session start.
-// Fetches CS-1 on-demand when user selects Option B (North Star brief).
-// Fetches CS-9 on-demand when user confirms a numbered offer from CS-1 or Option A.
-// Fetches CS-Receipt on-demand when session close is detected.
+// CS-11 routing: if no annual_operating_picture row for this user → fire CS-11.
+// If row exists → load chat-b (normal CoS session).
+// CS-1, CS-9, CS-Receipt load on-demand as before.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -20,7 +19,18 @@ async function getPrompt(skillId) {
   return data?.[0]?.system_prompt || null;
 }
 
-// Option B selected: user wants their North Star brief
+async function hasOperatingPicture(userId) {
+  if (!userId) return false;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${userId}&select=id&limit=1`, {
+    headers: {
+      'apikey': SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+    }
+  });
+  const data = await res.json();
+  return Array.isArray(data) && data.length > 0;
+}
+
 function userSelectedOptionB(messages) {
   const signals = ['option b', 'show me my brief', 'north star brief', 'my brief', 'morning brief'];
   for (const msg of messages) {
@@ -32,29 +42,28 @@ function userSelectedOptionB(messages) {
   return false;
 }
 
-// CS-9 trigger: user has confirmed a numbered offer from CS-1 (Option B) or Option A.
 function cs9ShouldLoad(messages) {
   const assistantPresentedOffers = messages.some(msg =>
     msg.role === 'assistant' &&
     (
       msg.content.includes('Here are three ways I can help') ||
       msg.content.includes('three ways I can help right now') ||
-      msg.content.includes('How I Can Help Right Now')
+      msg.content.includes('How I Can Help Right Now') ||
+      msg.content.includes('Here are three places we could start')
     )
   );
   if (!assistantPresentedOffers) return false;
-
   const offerPresentedIdx = messages.findIndex(msg =>
     msg.role === 'assistant' &&
     (
       msg.content.includes('Here are three ways I can help') ||
       msg.content.includes('three ways I can help right now') ||
-      msg.content.includes('How I Can Help Right Now')
+      msg.content.includes('How I Can Help Right Now') ||
+      msg.content.includes('Here are three places we could start')
     )
   );
-
   const afterOffers = messages.slice(offerPresentedIdx + 1);
-  const confirmSignals = ['1', '2', '3', 'option 1', 'option 2', 'option 3', 'yes', 'let\'s do that', 'that one', 'go with'];
+  const confirmSignals = ['1','2','3','4','a','b','c','d','option 1','option 2','option 3','yes',"let's do that",'that one','go with'];
   for (const msg of afterOffers) {
     if (msg.role !== 'user') continue;
     const text = msg.content.toLowerCase().trim();
@@ -63,20 +72,19 @@ function cs9ShouldLoad(messages) {
   return false;
 }
 
-// CS-Receipt trigger: session is winding down.
 function csReceiptShouldLoad(messages) {
   const closeSignals = [
-    'that\'s it', 'that is it', 'we\'re done', 'we are done',
-    'close it out', 'close the session', 'session closed',
-    'close the meeting', 'close the chat', 'end the meeting', 'end the session',
-    'close out', 'wrap up', 'wrap it up',
-    'i\'m done', 'i am done', 'all done',
-    'that\'s all', 'that is all', 'nope that\'s all', 'nope, that\'s all',
-    'thanks, that\'s all', 'that\'s all for now', 'nothing else',
-    'good to go', 'let\'s close', 'you can close', 'please close',
-    'nothing more', 'we\'re good', 'we are good',
-    'i\'ll send that', 'i will send that', 'send it', 'i\'ll do it',
-    'close it', 'done for today', 'that does it'
+    "that's it",'that is it',"we're done",'we are done',
+    'close it out','close the session','session closed',
+    'close the meeting','close the chat','end the meeting','end the session',
+    'close out','wrap up','wrap it up',
+    "i'm done",'i am done','all done',
+    "that's all",'that is all',"nope that's all","nope, that's all",
+    "thanks, that's all","that's all for now",'nothing else',
+    'good to go',"let's close",'you can close','please close',
+    'nothing more',"we're good",'we are good',
+    "i'll send that",'i will send that','send it',"i'll do it",
+    'close it','done for today','that does it'
   ];
   const userMessages = messages.filter(m => m.role === 'user');
   if (userMessages.length === 0) return false;
@@ -85,103 +93,67 @@ function csReceiptShouldLoad(messages) {
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: corsHeaders(), body: '' };
-  }
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' };
-  }
-  if (!ANTHROPIC_API_KEY) {
-    return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'API key not configured' }) };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: corsHeaders(), body: '' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  if (!ANTHROPIC_API_KEY) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'API key not configured' }) };
 
   try {
-    const { messages, context, userName } = JSON.parse(event.body);
+    const { messages, context, userName, userId } = JSON.parse(event.body);
 
-    // Always load governing doc
-    const governingPrompt = await getPrompt('chat-b');
+    const hasOP = await hasOperatingPicture(userId);
+    let systemPrompt;
 
-    if (!governingPrompt) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Governing doc not found in Supabase' }) };
-    }
+    if (!hasOP) {
+      const cs11Prompt = await getPrompt('cs-11');
+      if (!cs11Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-11 not found in Supabase' }) };
+      systemPrompt = cs11Prompt;
+    } else {
+      const governingPrompt = await getPrompt('chat-b');
+      if (!governingPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Governing doc not found in Supabase' }) };
+      systemPrompt = governingPrompt;
 
-    // Build system prompt — start with governing doc, append protocols as triggered
-    let systemPrompt = governingPrompt;
-
-    // CS-1: load when user selects Option B
-    if (userSelectedOptionB(messages)) {
-      const cs1Prompt = await getPrompt('cs-1');
-      if (cs1Prompt) {
-        systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
+      if (userSelectedOptionB(messages)) {
+        const cs1Prompt = await getPrompt('cs-1');
+        if (cs1Prompt) systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
       }
-    }
-
-    // CS-9: load when user confirms a numbered offer
-    if (cs9ShouldLoad(messages)) {
-      const cs9Prompt = await getPrompt('cs-9');
-      if (cs9Prompt) {
-        systemPrompt += '\n\n---\n\n## CS-9 — RECOMMENDATIONS RESPONSE PROTOCOL\n\n' + cs9Prompt;
+      if (cs9ShouldLoad(messages)) {
+        const cs9Prompt = await getPrompt('cs-9');
+        if (cs9Prompt) systemPrompt += '\n\n---\n\n## CS-9 — RECOMMENDATIONS RESPONSE PROTOCOL\n\n' + cs9Prompt;
       }
-    }
-
-    // CS-Receipt: load when session close is detected
-    if (csReceiptShouldLoad(messages)) {
-      const csReceiptPrompt = await getPrompt('cs-receipt');
-      if (csReceiptPrompt) {
-        systemPrompt += '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt;
-        // CUSTOM BUILD OUTPUT OVERRIDE — appended LAST so it is the final instruction the model reads.
-        // This overrides any human-readable receipt format in the cs-receipt prompt above.
-        systemPrompt += '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED\n\n' +
-          'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). ' +
-          'After completing the parking lot sweep, output your session close in EXACTLY this format — no exceptions:\n\n' +
-          '[Your brief closing words — 1-3 sentences max]\n' +
-          '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"daily_work","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"Daily Work — Chief of Staff","carried_forward":"[any open items or none]"}%%END_RECEIPT%%\n' +
-          'Session closed. [receipt pending]\n\n' +
-          'RULES:\n' +
-          '- Do NOT output a bullet list of receipt fields.\n' +
-          '- Do NOT output any text after "Session closed. [receipt pending]".\n' +
-          '- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n' +
-          '- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n' +
-          '- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+      if (csReceiptShouldLoad(messages)) {
+        const csReceiptPrompt = await getPrompt('cs-receipt');
+        if (csReceiptPrompt) {
+          systemPrompt += '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt;
+          systemPrompt += '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED\n\n' +
+            'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). ' +
+            'After completing the parking lot sweep, output your session close in EXACTLY this format — no exceptions:\n\n' +
+            '[Your brief closing words — 1-3 sentences max]\n' +
+            '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"daily_work","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"Daily Work — Chief of Staff","carried_forward":"[any open items or none]"}%%END_RECEIPT%%\n' +
+            'Session closed. [receipt pending]\n\n' +
+            'RULES:\n- Do NOT output a bullet list of receipt fields.\n- Do NOT output any text after "Session closed. [receipt pending]".\n- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+        }
       }
     }
 
     const contextStr = buildContextString(context);
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
+      headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 2048,
         system: systemPrompt,
         messages: [
-          {
-            role: 'user',
-            content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there')
-          },
-          {
-            role: 'assistant',
-            content: 'Understood. I have the full operating picture. Ready.'
-          },
+          { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
+          { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
           ...messages.map(m => ({ role: m.role, content: m.content }))
         ]
       })
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('Anthropic error:', err);
-      throw new Error('Anthropic API error');
-    }
-
+    if (!response.ok) { const err = await response.text(); console.error('Anthropic error:', err); throw new Error('Anthropic API error'); }
     const data = await response.json();
     const message = data.content?.[0]?.text || 'No response received.';
-
     return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message }) };
 
   } catch (err) {
@@ -193,17 +165,8 @@ exports.handler = async (event) => {
 function buildContextString(ctx) {
   if (!ctx) return 'No context available.';
   const lines = [];
-
-  // Always inject today's date so protocols can reference it
-  const todayET = new Date().toLocaleDateString('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const todayET = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   lines.push('TODAY\'S DATE: ' + todayET);
-
   if (ctx.annual_operating_picture) {
     const a = ctx.annual_operating_picture;
     lines.push('\n=== ANNUAL OPERATING PICTURE ===');
@@ -214,7 +177,6 @@ function buildContextString(ctx) {
     if (a.limiting_belief_raw) lines.push('Limiting Belief: ' + a.limiting_belief_raw);
     if (a.congruent_behavior_raw) lines.push('Congruent Behavior: ' + a.congruent_behavior_raw);
   }
-
   if (ctx.quarterly_dashboard) {
     const q = ctx.quarterly_dashboard;
     lines.push('\n=== CURRENT QUARTER ===');
@@ -229,7 +191,6 @@ function buildContextString(ctx) {
     if (q.personal_action_plan) lines.push('Personal Action Plan: ' + JSON.stringify(q.personal_action_plan));
     if (q.current_personal_step) lines.push('Current Personal Step: ' + q.current_personal_step);
   }
-
   if (ctx.recent_sessions && ctx.recent_sessions.length > 0) {
     lines.push('\n=== RECENT SESSIONS ===');
     ctx.recent_sessions.forEach(function(r, i) {
@@ -240,28 +201,20 @@ function buildContextString(ctx) {
       if (r.progress_position) lines.push('  Position: ' + r.progress_position);
     });
   }
-
   if (ctx.open_parking_lot && ctx.open_parking_lot.length > 0) {
     lines.push('\n=== OPEN PARKING LOT ===');
     ctx.open_parking_lot.forEach(function(p) {
       lines.push('- ' + p.item + (p.due_date ? ' (due ' + p.due_date + ')' : '') + (p.why ? ' — ' + p.why : ''));
     });
   }
-
   if (ctx.user) {
     lines.push('\n=== USER ===');
     lines.push('[SYSTEM: SESSION_USER_ID = ' + ctx.user.id + ']');
     lines.push('display_name: ' + ctx.user.display_name);
   }
-
   return lines.join('\n');
 }
 
 function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+  return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
 }
