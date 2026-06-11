@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11c -->
+  <!-- cache-bust: 2026-06-11d -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -22,16 +22,6 @@
       --sidebar-w: 60px;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      overflow: hidden;
-    }
-
-    /* CONFETTI CANVAS */
     #confetti-canvas {
       position: fixed;
       top: 0; left: 0;
@@ -39,6 +29,15 @@
       pointer-events: none;
       z-index: 9999;
       display: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
     }
 
     .sidebar {
@@ -52,291 +51,90 @@
       flex-shrink: 0;
       border-right: 1px solid var(--border);
     }
-    .sidebar-logo {
-      width: 36px; height: 36px;
-      background: var(--text);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 18px;
-    }
+    .sidebar-logo { width: 36px; height: 36px; background: var(--text); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
     .sidebar-logo svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; }
-    .nav-btn {
-      width: 38px; height: 38px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      color: var(--muted);
-      transition: all 0.15s;
-      position: relative;
-    }
+    .nav-btn { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.15s; position: relative; }
     .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .nav-btn:hover { background: var(--surface2); color: var(--text); }
     .nav-btn.active { background: var(--gold-bg); color: var(--gold); }
-    .nav-btn .tooltip {
-      position: absolute;
-      left: 48px;
-      background: var(--text);
-      color: #fff;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 11px;
-      white-space: nowrap;
-      display: none;
-      z-index: 100;
-      pointer-events: none;
-    }
+    .nav-btn .tooltip { position: absolute; left: 48px; background: var(--text); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 11px; white-space: nowrap; display: none; z-index: 100; pointer-events: none; }
     .nav-btn:hover .tooltip { display: block; }
     .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .avatar {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: var(--gold);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: #fff;
-      cursor: pointer;
-    }
-
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; cursor: pointer; }
     .nav-btn.locked { opacity: 0.4; cursor: not-allowed; }
     .nav-btn.locked:hover { background: none; color: var(--muted); }
 
-    .op-card {
-      display: none;
-      padding: 8px 24px;
-      background: var(--gold-bg);
-      border-bottom: 1px solid #e8d89a;
-      font-size: 12px;
-      flex-shrink: 0;
-    }
+    .op-card { display: none; padding: 8px 24px; background: var(--gold-bg); border-bottom: 1px solid #e8d89a; font-size: 12px; flex-shrink: 0; }
     .op-card.visible { display: block; }
-    .op-card-label {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; color: var(--gold); margin-bottom: 2px;
-    }
+    .op-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold); margin-bottom: 2px; }
     .op-card-value { font-size: 12px; color: var(--text); line-height: 1.4; }
 
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .view { display: none; flex: 1; overflow: hidden; flex-direction: column; min-height: 0; }
     .view.active { display: flex; }
 
     /* HOME */
-    .home-wrap {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 80px 24px 40px;
-    }
+    .home-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 80px 24px 40px; }
     .home-inner { width: 100%; max-width: 680px; }
-    .home-greeting {
-      font-size: 36px;
-      font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: 6px;
-      color: var(--text);
-    }
+    .home-greeting { font-size: 36px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; color: var(--text); }
     .home-greeting .name { color: var(--gold); }
-    .home-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
-
-    .context-strip {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
-    .ctx-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-    }
+    .context-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+    .ctx-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
     .ctx-card.full { grid-column: 1 / -1; }
     .ctx-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 5px; }
     .ctx-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
     .ctx-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-    /* HOME NAV CARDS */
-    .home-section-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-    .nav-cards-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-    .nav-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px 18px 18px;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .nav-card:hover {
-      border-color: var(--gold);
-      box-shadow: 0 2px 12px rgba(184,134,11,0.1);
-      transform: translateY(-1px);
-    }
-    .nav-card-icon {
-      width: 32px; height: 32px;
-      background: var(--gold-bg);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--gold);
-      font-size: 16px;
-    }
-    .nav-card-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      line-height: 1.3;
-    }
-    .nav-card-desc {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* HOME DASHBOARD PLACEHOLDER */
-    .dashboard-placeholder {
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: 14px;
-      padding: 40px 24px;
-      text-align: center;
-      color: var(--muted);
-    }
-    .dashboard-placeholder-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin-bottom: 8px;
-    }
-    .dashboard-placeholder-text {
-      font-size: 13px;
-      line-height: 1.6;
-    }
+    .home-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 12px; }
+    .nav-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+    .nav-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 18px 18px; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 12px; }
+    .nav-card:hover { border-color: var(--gold); box-shadow: 0 2px 12px rgba(184,134,11,0.1); transform: translateY(-1px); }
+    .nav-card-icon { width: 32px; height: 32px; background: var(--gold-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 16px; }
+    .nav-card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .nav-card-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .dashboard-placeholder { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 40px 24px; text-align: center; color: var(--muted); }
+    .dashboard-placeholder-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .dashboard-placeholder-text { font-size: 13px; line-height: 1.6; }
 
     /* CHAT LAYOUT */
-    .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .chat-header {
-      padding: 14px 24px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-      display: flex; align-items: center; gap: 12px;
-      flex-shrink: 0;
-    }
-    .chat-header-icon {
-      width: 30px; height: 30px;
-      background: var(--gold-bg);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--gold); font-size: 15px;
-    }
+    .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .chat-header { padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .chat-header-icon { width: 30px; height: 30px; background: var(--gold-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 15px; }
     .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text); }
     .chat-header-sub { font-size: 11px; color: var(--muted); }
 
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0 24px 32px;
-      display: flex;
-      flex-direction: column;
-    }
+    /* FIX: messages container must have min-height:0 and flex:1 to scroll within flex parent */
+    .messages { flex: 1; min-height: 0; overflow-y: auto; padding: 0 24px 32px; display: flex; flex-direction: column; }
 
-    .chat-greeting {
-      width: 100%;
-      padding: 56px 0 36px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .chat-greeting-line1 {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1.2;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
+    .chat-greeting { width: 100%; padding: 56px 0 36px; text-align: center; flex-shrink: 0; }
+    .chat-greeting-line1 { font-size: 28px; font-weight: 700; line-height: 1.2; color: var(--text); margin-bottom: 6px; }
     .chat-greeting-line1 .name { color: var(--gold); }
-    .chat-greeting-line2 {
-      font-size: 16px;
-      font-weight: 400;
-      color: var(--text2);
-    }
+    .chat-greeting-line2 { font-size: 16px; font-weight: 400; color: var(--text2); }
 
-    .msg-row {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-      margin-top: 20px;
-    }
-    .msg {
-      width: 100%;
-      max-width: 660px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+    .msg-row { display: flex; justify-content: center; width: 100%; margin-top: 20px; }
+    .msg { width: 100%; max-width: 660px; display: flex; flex-direction: column; gap: 4px; }
     .msg.user { align-items: flex-end; }
     .msg.assistant { align-items: flex-start; }
-
-    .msg-bubble {
-      padding: 11px 15px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.7;
-    }
-    .msg.user .msg-bubble {
-      background: var(--gold);
-      color: #fff;
-      border-bottom-right-radius: 4px;
-      white-space: pre-wrap;
-      max-width: 80%;
-    }
-    .msg.assistant .msg-bubble {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-bottom-left-radius: 4px;
-      width: 100%;
-    }
+    .msg-bubble { padding: 11px 15px; border-radius: 14px; font-size: 14px; line-height: 1.7; }
+    .msg.user .msg-bubble { background: var(--gold); color: #fff; border-bottom-right-radius: 4px; white-space: pre-wrap; max-width: 80%; }
+    .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; width: 100%; }
     .msg.assistant .msg-bubble p { margin: 0 0 10px; }
     .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
     .msg.assistant .msg-bubble strong { color: var(--text); font-weight: 700; }
     .msg.assistant .msg-bubble em { font-style: italic; color: var(--text2); }
-    .msg.assistant .msg-bubble h1,
-    .msg.assistant .msg-bubble h2,
-    .msg.assistant .msg-bubble h3 { font-weight: 700; margin: 14px 0 6px; line-height: 1.3; color: var(--text); }
+    .msg.assistant .msg-bubble h1,.msg.assistant .msg-bubble h2,.msg.assistant .msg-bubble h3 { font-weight: 700; margin: 14px 0 6px; line-height: 1.3; color: var(--text); }
     .msg.assistant .msg-bubble h1 { font-size: 17px; }
     .msg.assistant .msg-bubble h2 { font-size: 15px; }
     .msg.assistant .msg-bubble h3 { font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.4px; }
-    .msg.assistant .msg-bubble ul,
-    .msg.assistant .msg-bubble ol { padding-left: 20px; margin: 6px 0 10px; }
+    .msg.assistant .msg-bubble ul,.msg.assistant .msg-bubble ol { padding-left: 20px; margin: 6px 0 10px; }
     .msg.assistant .msg-bubble li { margin-bottom: 4px; }
     .msg.assistant .msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
     .msg.assistant .msg-bubble code { background: var(--surface2); border-radius: 4px; padding: 1px 5px; font-size: 12px; font-family: monospace; color: var(--gold); }
     .msg.assistant .msg-bubble blockquote { border-left: 3px solid var(--gold); margin: 8px 0; padding: 6px 12px; color: var(--muted); font-style: italic; }
     .msg.assistant .msg-bubble a { color: var(--gold); text-decoration: underline; cursor: pointer; }
     .msg-time { font-size: 10px; color: var(--muted); padding: 0 2px; }
-
     .msg-actions { display: flex; align-items: center; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
     .msg.assistant:hover .msg-actions { opacity: 1; }
-    .copy-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--muted); padding: 3px 5px; border-radius: 5px;
-      line-height: 1; transition: color 0.15s, background 0.15s;
-      display: flex; align-items: center;
-    }
+    .copy-btn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 3px 5px; border-radius: 5px; line-height: 1; transition: color 0.15s, background 0.15s; display: flex; align-items: center; }
     .copy-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .copy-btn:hover { color: var(--text); background: var(--surface2); }
     .copy-btn.copied { color: #16a34a; }
@@ -348,45 +146,19 @@
     @keyframes typing { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
 
     .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; flex-shrink: 0; }
-    .chat-input-wrap {
-      width: 100%; max-width: 660px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 14px 10px;
-      display: flex; flex-direction: column; gap: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      transition: border 0.15s;
-    }
+    .chat-input-wrap { width: 100%; max-width: 660px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: border 0.15s; }
     .chat-input-wrap:focus-within { border-color: var(--gold); }
-    .chat-input {
-      flex: 1; background: transparent; border: none; outline: none;
-      color: var(--text); font-size: 14px; font-family: inherit;
-      resize: none; max-height: 120px; line-height: 1.5;
-    }
+    /* FIX: min-height ensures textarea starts at one line height */
+    .chat-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: inherit; resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; overflow-y: hidden; }
     .chat-input::placeholder { color: var(--muted); }
     .chat-input-row { display: flex; justify-content: flex-end; }
-    .send-btn {
-      width: 34px; height: 34px;
-      background: var(--gold);
-      border: none; border-radius: 8px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-    }
+    .send-btn { width: 34px; height: 34px; background: var(--gold); border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
     .send-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .send-btn:hover { background: var(--gold-light); }
     .send-btn:disabled { background: #ccc; cursor: not-allowed; }
 
     /* ACCOUNT */
-    .account-wrap {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 60px 24px 60px;
-    }
+    .account-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 60px 24px 60px; }
     .account-inner { width: 100%; max-width: 560px; }
     .account-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .account-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
@@ -398,6 +170,14 @@
     .account-row-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
     .account-row-value { font-size: 14px; font-weight: 500; color: var(--text); }
     .account-row-value.muted { color: var(--muted); font-weight: 400; font-style: italic; }
+    /* Editable name field */
+    .name-edit-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .name-input { font-size: 14px; font-weight: 500; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; background: var(--surface2); outline: none; flex: 1; font-family: inherit; }
+    .name-input:focus { border-color: var(--gold); background: var(--surface); }
+    .name-save-btn { font-size: 12px; font-weight: 600; color: var(--gold); background: var(--gold-bg); border: 1px solid #e8d89a; border-radius: 7px; padding: 5px 12px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+    .name-save-btn:hover { background: #f5ead0; }
+    .name-save-btn:disabled { opacity: 0.5; cursor: default; }
+    .name-save-msg { font-size: 11px; color: #16a34a; margin-top: 4px; display: none; }
     .doc-empty { padding: 28px 20px; text-align: center; color: var(--muted); font-size: 13px; }
     .help-link { display: flex; align-items: center; gap: 10px; padding: 14px 20px; font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
     .help-link:last-child { border-bottom: none; }
@@ -421,17 +201,13 @@
 <canvas id="confetti-canvas"></canvas>
 
 <div class="loading-overlay" id="loading">
-  <div class="loading-logo">
-    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-  </div>
+  <div class="loading-logo"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   <div class="loading-spinner"></div>
   <div class="loading-text">Loading your operating system…</div>
 </div>
 
 <nav class="sidebar">
-  <div class="sidebar-logo">
-    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-  </div>
+  <div class="sidebar-logo"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   <div class="nav-btn active" id="nav-home" onclick="switchView('home')">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <div class="tooltip">Home</div>
@@ -469,43 +245,30 @@
       <div class="home-inner">
         <div class="home-greeting">Hi there, <span class="name" id="user-first-name-home">—</span></div>
         <div class="home-greeting" style="font-weight:400; color: var(--text2); font-size:28px; margin-bottom: 24px;">What would you like to work on?</div>
-
         <div class="context-strip" id="ctx-strip" style="display:none;">
           <div class="ctx-card" id="ctx-pro"><div class="ctx-label">Professional Focus</div><div class="ctx-value" id="ctx-pro-val">—</div></div>
           <div class="ctx-card" id="ctx-per"><div class="ctx-label">Personal Focus</div><div class="ctx-value" id="ctx-per-val">—</div></div>
           <div class="ctx-card full" id="ctx-last" style="display:none;"><div class="ctx-label">Last Session</div><div class="ctx-value" id="ctx-last-val">—</div><div class="ctx-sub" id="ctx-last-date">—</div></div>
         </div>
-
         <div class="home-section-label">Start a conversation</div>
         <div class="nav-cards-grid">
           <div class="nav-card" onclick="switchView('setup')">
             <div class="nav-card-icon">⚙️</div>
-            <div>
-              <div class="nav-card-title">Your Setup</div>
-              <div class="nav-card-desc">Build or update your operating picture.</div>
-            </div>
+            <div><div class="nav-card-title">Your Setup</div><div class="nav-card-desc">Build or update your operating picture.</div></div>
           </div>
           <div class="nav-card" onclick="switchView('chat')">
             <div class="nav-card-icon">✦</div>
-            <div>
-              <div class="nav-card-title">Daily Brief</div>
-              <div class="nav-card-desc">Work through today with your Chief of Staff.</div>
-            </div>
+            <div><div class="nav-card-title">Daily Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div>
           </div>
           <div class="nav-card" onclick="switchView('prep')">
             <div class="nav-card-icon">📖</div>
-            <div>
-              <div class="nav-card-title">Prep Room</div>
-              <div class="nav-card-desc">Prepare for what's ahead.</div>
-            </div>
+            <div><div class="nav-card-title">Prep Room</div><div class="nav-card-desc">Prepare for what's ahead.</div></div>
           </div>
         </div>
-
         <div class="dashboard-placeholder">
           <div class="dashboard-placeholder-label">Dashboard</div>
           <div class="dashboard-placeholder-text">Your key metrics and progress will appear here as your operating picture develops.</div>
         </div>
-
       </div>
     </div>
   </div>
@@ -517,10 +280,7 @@
         <div class="chat-header-icon">⚙</div>
         <div><div class="chat-header-title">Your Setup</div><div class="chat-header-sub">Build your operating picture</div></div>
       </div>
-      <div class="op-card" id="op-summary-card-setup">
-        <div class="op-card-label">Your North Star</div>
-        <div class="op-card-value" id="op-summary-text-setup">—</div>
-      </div>
+      <div class="op-card" id="op-summary-card-setup"><div class="op-card-label">Your North Star</div><div class="op-card-value" id="op-summary-text-setup">—</div></div>
       <div class="messages" id="messages-setup">
         <div class="chat-greeting">
           <div class="chat-greeting-line1">Getting to know you, <span class="name" id="greeting-name-setup">—</span>.</div>
@@ -529,7 +289,7 @@
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
+          <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-setup" onclick="sendMessage('setup')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
@@ -543,10 +303,7 @@
         <div class="chat-header-icon">✦</div>
         <div><div class="chat-header-title">Daily Brief</div><div class="chat-header-sub">Chief of Staff — direct line ✓</div></div>
       </div>
-      <div class="op-card" id="op-summary-card">
-        <div class="op-card-label">Your North Star</div>
-        <div class="op-card-value" id="op-summary-text">—</div>
-      </div>
+      <div class="op-card" id="op-summary-card"><div class="op-card-label">Your North Star</div><div class="op-card-value" id="op-summary-text">—</div></div>
       <div class="messages" id="messages">
         <div class="chat-greeting">
           <div class="chat-greeting-line1">Good to see you, <span class="name" id="greeting-name-chat">—</span>.</div>
@@ -555,7 +312,7 @@
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn" onclick="sendMessage('chat')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
@@ -577,7 +334,7 @@
       </div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
-          <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" rows="1" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
+          <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-prep" onclick="sendMessage('prep')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
@@ -591,7 +348,16 @@
       <div class="account-sub">Your profile and settings</div>
       <div class="account-section">
         <div class="account-section-header"><div class="account-section-title">Profile</div></div>
-        <div class="account-row"><div><div class="account-row-label">Name</div><div class="account-row-value" id="acct-name">—</div></div></div>
+        <div class="account-row">
+          <div style="flex:1;">
+            <div class="account-row-label">Preferred name</div>
+            <div class="name-edit-wrap">
+              <input class="name-input" id="name-input" type="text" placeholder="Your name" />
+              <button class="name-save-btn" id="name-save-btn" onclick="saveName()">Save</button>
+            </div>
+            <div class="name-save-msg" id="name-save-msg">Saved ✓</div>
+          </div>
+        </div>
         <div class="account-row"><div><div class="account-row-label">Email</div><div class="account-row-value" id="acct-email">—</div></div></div>
         <div class="account-row"><div><div class="account-row-label">Plan</div><div class="account-row-value" id="acct-plan">Chief of Staff</div></div></div>
       </div>
@@ -628,36 +394,24 @@ let chatHistories = { setup: [], chat: [], prep: [] };
 /* ── CONFETTI ─────────────────────────────────────────────────────────── */
 function launchConfetti() {
   const canvas = document.getElementById('confetti-canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
   canvas.style.display = 'block';
   const ctx = canvas.getContext('2d');
   const colors = ['#B8860B','#D4A017','#FFD700','#FFF8DC','#ffffff','#C0A060'];
   const pieces = Array.from({ length: 140 }, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height - canvas.height,
-    r: Math.random() * 6 + 3,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    vx: (Math.random() - 0.5) * 2,
-    vy: Math.random() * 3 + 2,
-    angle: Math.random() * Math.PI * 2,
-    spin: (Math.random() - 0.5) * 0.2
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height,
+    r: Math.random() * 6 + 3, color: colors[Math.floor(Math.random() * colors.length)],
+    vx: (Math.random() - 0.5) * 2, vy: Math.random() * 3 + 2,
+    angle: Math.random() * Math.PI * 2, spin: (Math.random() - 0.5) * 0.2
   }));
-  let frame = 0;
-  const maxFrames = 180;
+  let frame = 0; const maxFrames = 180;
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     pieces.forEach(p => {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle);
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = Math.max(0, 1 - frame / maxFrames);
-      ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
-      ctx.restore();
-      p.x += p.vx;
-      p.y += p.vy;
-      p.angle += p.spin;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+      ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, 1 - frame / maxFrames);
+      ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore();
+      p.x += p.vx; p.y += p.vy; p.angle += p.spin;
       if (p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
     });
     frame++;
@@ -676,11 +430,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadProfile(email, userId);
   await loadHomeContext();
   document.getElementById('loading').style.display = 'none';
-  // Check for celebration param (arriving from CS-11 onboarding)
   const params = new URLSearchParams(window.location.search);
   if (params.get('celebrate') === 'true') {
     setTimeout(launchConfetti, 400);
-    // Clean the URL without reloading
     window.history.replaceState({}, '', window.location.pathname);
   }
 });
@@ -691,7 +443,6 @@ async function sbQuery(table, params = '') {
   });
   return res.json();
 }
-
 async function sbInsert(table, payload) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
@@ -701,17 +452,26 @@ async function sbInsert(table, payload) {
   if (!res.ok) throw new Error('Supabase insert failed: ' + await res.text());
   return res.json();
 }
+async function sbPatch(table, params, payload) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Supabase patch failed: ' + await res.text());
+  return res.json();
+}
 
 async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email,tier&limit=1`);
   userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0], tier: 1 };
   const firstName = (userProfile?.display_name || '').split(' ')[0];
   ['user-first-name-home','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = firstName;
+    const el = document.getElementById(id); if (el) el.textContent = firstName;
   });
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
-  document.getElementById('acct-name').textContent = userProfile?.display_name || '—';
+  const nameInput = document.getElementById('name-input');
+  if (nameInput) nameInput.value = userProfile?.display_name || '';
   document.getElementById('acct-email').textContent = userProfile?.email || email;
   const tier = userProfile?.tier || 1;
   const coachingBtn = document.getElementById('nav-coaching');
@@ -720,27 +480,41 @@ async function loadProfile(email, userId) {
   if (planEl) planEl.textContent = tier >= 3 ? 'Chief of Staff — Gold' : 'Chief of Staff';
 }
 
+async function saveName() {
+  const input = document.getElementById('name-input');
+  const btn = document.getElementById('name-save-btn');
+  const msg = document.getElementById('name-save-msg');
+  const newName = input.value.trim();
+  if (!newName || !userProfile?.id) return;
+  btn.disabled = true;
+  try {
+    await sbPatch('profiles', `id=eq.${userProfile.id}`, { display_name: newName });
+    userProfile.display_name = newName;
+    const firstName = newName.split(' ')[0];
+    ['user-first-name-home','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = firstName;
+    });
+    document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  } catch (err) { console.error('Name save failed:', err); alert('Could not save name. Please try again.'); }
+  btn.disabled = false;
+}
+
 async function loadHomeContext() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
   const aopRows = await sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival&order=created_at.desc&limit=1`);
   const aop = aopRows?.[0];
   if (aop?.annual_arrival) {
-    ['op-summary-text', 'op-summary-text-setup'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = aop.annual_arrival;
-    });
-    ['op-summary-card', 'op-summary-card-setup'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('visible');
-    });
+    ['op-summary-text', 'op-summary-text-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = aop.annual_arrival; });
+    ['op-summary-card', 'op-summary-card-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('visible'); });
   }
   const [quarterly, receipts] = await Promise.all([
     sbQuery('quarterly_dashboard_content', `user_id=eq.${uid}&select=quarter,quarterly_focus_professional,quarterly_focus_personal&order=created_at.desc&limit=1`),
     sbQuery('session_receipts', `user_id=eq.${uid}&select=session_date,bronze_task,completion_status&order=session_date.desc&limit=1`),
   ]);
-  const q = quarterly?.[0];
-  const last = receipts?.[0];
+  const q = quarterly?.[0]; const last = receipts?.[0];
   if (q?.quarterly_focus_professional) {
     document.getElementById('ctx-pro-val').textContent = q.quarterly_focus_professional;
     document.getElementById('ctx-per-val').textContent = q.quarterly_focus_personal || '—';
@@ -760,10 +534,8 @@ async function loadDocuments(uid) {
 
 function switchView(name) {
   ['home','setup','chat','prep','account','coaching'].forEach(v => {
-    const viewEl = document.getElementById('view-' + v);
-    if (viewEl) viewEl.classList.toggle('active', v === name);
-    const nb = document.getElementById('nav-' + v);
-    if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
+    const viewEl = document.getElementById('view-' + v); if (viewEl) viewEl.classList.toggle('active', v === name);
+    const nb = document.getElementById('nav-' + v); if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
 }
 
@@ -776,7 +548,11 @@ function handleCoachingClick() {
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('chat'); } }
 function handleKeySetup(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('setup'); } }
 function handleKeyPrep(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('prep'); } }
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  el.style.overflowY = el.scrollHeight > 120 ? 'auto' : 'hidden';
+}
 
 async function generateReceiptNumber() {
   const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -798,7 +574,6 @@ async function writeSessionReceipt(fields) {
 }
 
 async function processReceiptBlock(text) {
-  // Strip [NORTH_STAR_COMPLETE] trigger before any display
   text = text.replace(/\[NORTH_STAR_COMPLETE\]/g, '').trim();
   const start = text.indexOf('%%RECEIPT%%');
   const end = text.indexOf('%%END_RECEIPT%%');
@@ -819,7 +594,7 @@ async function sendMessage(chatId) {
   if (!text || !session) return;
   const sendBtn = document.getElementById(sendBtnId);
   sendBtn.disabled = true;
-  input.value = ''; input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto'; input.style.overflowY = 'hidden';
   appendMessage(messagesId, 'user', text);
   chatHistories[chatId].push({ role: 'user', content: text });
   const typingEl = appendTyping(messagesId);
@@ -870,17 +645,15 @@ const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/>
 function appendMessage(messagesId, role, text) {
   const msgs = document.getElementById(messagesId);
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-  const row = document.createElement('div');
-  row.className = 'msg-row';
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
+  const row = document.createElement('div'); row.className = 'msg-row';
+  const div = document.createElement('div'); div.className = `msg ${role}`;
   if (role === 'assistant') {
     const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.innerHTML = renderMarkdown(text);
     const actionsEl = document.createElement('div'); actionsEl.className = 'msg-actions';
     const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.title = 'Copy to clipboard'; copyBtn.innerHTML = ICON_COPY;
     copyBtn.addEventListener('click', () => {
       const plainText = bubble.innerText || bubble.textContent || '';
-      navigator.clipboard.writeText(plainText).then(() => { copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); }).catch(() => { const ta = document.createElement('textarea'); ta.value = plainText; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); });
+      navigator.clipboard.writeText(plainText).then(() => { copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); }).catch(() => { const ta = document.createElement('textarea'); ta.value = plainText; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); });
     });
     actionsEl.appendChild(copyBtn);
     const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
@@ -890,9 +663,7 @@ function appendMessage(messagesId, role, text) {
     const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
     div.appendChild(bubble); div.appendChild(timeEl);
   }
-  row.appendChild(div);
-  msgs.appendChild(row);
-  msgs.scrollTop = msgs.scrollHeight;
+  row.appendChild(div); msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
   return row;
 }
 
@@ -901,8 +672,7 @@ function appendTyping(messagesId) {
   const row = document.createElement('div'); row.className = 'msg-row';
   const div = document.createElement('div'); div.className = 'msg assistant';
   div.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  row.appendChild(div);
-  msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
+  row.appendChild(div); msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
   return row;
 }
 
