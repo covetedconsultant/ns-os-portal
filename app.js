@@ -9,6 +9,10 @@ const USERS = {
   'moveoutofmichigan@gmail.com': {
     password: 'diana123',
     userId: '149ec2e7-27f1-48fc-9a7c-abacd9be2fc1'
+  },
+  'coveted.consultant+test007@gmail.com': {
+    password: 'kaytest007',
+    userId: 'fd019cd2-ba6d-43a9-9b9e-ef2de4fd3582'
   }
 };
 
