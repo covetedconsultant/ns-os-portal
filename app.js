@@ -22,6 +22,10 @@ const USERS = {
   'coveted.consultant+test008@gmail.com': {
     password: 'kaytest008',
     userId: 'cd031b8d-61a8-4890-8246-28c0afe05525'
+  },
+  'coveted.consultant+test009@gmail.com': {
+    password: 'albtest009',
+    userId: '7ee775c4-b9eb-48ab-a1e9-83e61fc487d4'
   }
 };
 
