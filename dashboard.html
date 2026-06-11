@@ -94,6 +94,7 @@
       background: var(--gold-bg);
       border-bottom: 1px solid #e8d89a;
       font-size: 12px;
+      flex-shrink: 0;
     }
     .op-card.visible { display: block; }
     .op-card-label {
@@ -210,6 +211,7 @@
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
     }
     .chat-header-icon {
       width: 30px; height: 30px;
@@ -221,9 +223,11 @@
     .chat-header-title { font-size: 14px; font-weight: 600; color: var(--text); }
     .chat-header-sub { font-size: 11px; color: var(--muted); }
 
-    /* Chat room greeting */
+    /* Chat greeting — lives inside .messages scroll area */
     .chat-greeting {
-      padding: 48px 24px 24px;
+      width: 100%;
+      max-width: 660px;
+      padding: 48px 0 32px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -247,12 +251,16 @@
     .messages {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 24px 32px;
+      padding: 0 24px 32px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
       align-items: center;
+      gap: 0;
     }
+    /* Gap between messages but not between greeting and first message */
+    .messages .msg + .msg { margin-top: 20px; }
+    .messages .chat-greeting + .msg { margin-top: 20px; }
+
     .msg {
       width: 100%;
       max-width: 660px;
@@ -319,7 +327,7 @@
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes typing { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
 
-    .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; }
+    .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; flex-shrink: 0; }
     .chat-input-wrap {
       width: 100%; max-width: 660px;
       background: var(--surface);
@@ -463,11 +471,12 @@
         <div class="op-card-label">Your North Star</div>
         <div class="op-card-value" id="op-summary-text-setup">—</div>
       </div>
-      <div class="chat-greeting">
-        <div class="chat-greeting-line1">Getting to know you, <span class="name" id="greeting-name-setup">—</span>.</div>
-        <div class="chat-greeting-line2">Let's build your operating picture.</div>
+      <div class="messages" id="messages-setup">
+        <div class="chat-greeting">
+          <div class="chat-greeting-line1">Getting to know you, <span class="name" id="greeting-name-setup">—</span>.</div>
+          <div class="chat-greeting-line2">Let's build your operating picture.</div>
+        </div>
       </div>
-      <div class="messages" id="messages-setup"></div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input-setup" placeholder="Let's build your operating picture…" rows="1" onkeydown="handleKeySetup(event)" oninput="autoResize(this)"></textarea>
@@ -488,11 +497,12 @@
         <div class="op-card-label">Your North Star</div>
         <div class="op-card-value" id="op-summary-text">—</div>
       </div>
-      <div class="chat-greeting">
-        <div class="chat-greeting-line1">Good to see you, <span class="name" id="greeting-name-chat">—</span>.</div>
-        <div class="chat-greeting-line2">What are we working on today?</div>
+      <div class="messages" id="messages">
+        <div class="chat-greeting">
+          <div class="chat-greeting-line1">Good to see you, <span class="name" id="greeting-name-chat">—</span>.</div>
+          <div class="chat-greeting-line2">What are we working on today?</div>
+        </div>
       </div>
-      <div class="messages" id="messages"></div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -509,11 +519,12 @@
         <div class="chat-header-icon">📖</div>
         <div><div class="chat-header-title">Prep Room</div><div class="chat-header-sub">Prepare for what's ahead</div></div>
       </div>
-      <div class="chat-greeting">
-        <div class="chat-greeting-line1">Ready when you are, <span class="name" id="greeting-name-prep">—</span>.</div>
-        <div class="chat-greeting-line2">What are you preparing for?</div>
+      <div class="messages" id="messages-prep">
+        <div class="chat-greeting">
+          <div class="chat-greeting-line1">Ready when you are, <span class="name" id="greeting-name-prep">—</span>.</div>
+          <div class="chat-greeting-line2">What are you preparing for?</div>
+        </div>
       </div>
-      <div class="messages" id="messages-prep"></div>
       <div class="chat-input-area">
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" rows="1" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
@@ -594,7 +605,6 @@ async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email,tier&limit=1`);
   userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0], tier: 1 };
   const firstName = (userProfile?.display_name || '').split(' ')[0];
-  // Set name everywhere
   ['user-first-name-home','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = firstName;
