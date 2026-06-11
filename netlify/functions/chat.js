@@ -1,6 +1,6 @@
 // netlify/functions/chat.js
 // CS-11 routing: if no annual_operating_picture row for this user → fire CS-11.
-// If row exists → load chat-b (normal CoS session).
+// If row exists → load cs-12 (returning user / gold operating picture).
 // CS-1, CS-9, CS-Receipt load on-demand as before.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -104,13 +104,15 @@ exports.handler = async (event) => {
     let systemPrompt;
 
     if (!hasOP) {
+      // New user — no operating picture yet → fire CS-11 onboarding
       const cs11Prompt = await getPrompt('cs-11');
       if (!cs11Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-11 not found in Supabase' }) };
       systemPrompt = cs11Prompt;
     } else {
-      const governingPrompt = await getPrompt('chat-b');
-      if (!governingPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Governing doc not found in Supabase' }) };
-      systemPrompt = governingPrompt;
+      // Returning user — operating picture exists → load CS-12
+      const cs12Prompt = await getPrompt('cs-12');
+      if (!cs12Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-12 not found in Supabase' }) };
+      systemPrompt = cs12Prompt;
 
       if (userSelectedOptionB(messages)) {
         const cs1Prompt = await getPrompt('cs-1');
