@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11h -->
+  <!-- cache-bust: 2026-06-11i -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -178,6 +178,11 @@
     .copy-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .copy-btn:hover { color: var(--text); background: var(--surface2); }
     .copy-btn.copied { color: #16a34a; }
+    .retry-btn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 3px 5px; border-radius: 5px; line-height: 1; transition: color 0.15s, background 0.15s; display: flex; align-items: center; }
+    .retry-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .retry-btn:hover { color: var(--text); background: var(--surface2); }
+    .msg.user .msg-actions { display: flex; align-items: center; padding: 0 2px; opacity: 0; transition: opacity 0.15s; }
+    .msg.user:hover .msg-actions { opacity: 1; }
 
     .typing-indicator { display: flex; gap: 4px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; border-bottom-left-radius: 4px; width: fit-content; }
     .typing-dot { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: typing 1.2s infinite; }
@@ -185,7 +190,10 @@
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes typing { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
 
-    .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: center; flex-shrink: 0; }
+    .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; }
+    .prefill-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 660px; }
+    .prefill-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
+    .prefill-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
     .chat-input-wrap { width: 100%; max-width: 660px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: border 0.15s; }
     .chat-input-wrap:focus-within { border-color: var(--gold); }
     .chat-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: inherit; resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; overflow-y: hidden; }
@@ -236,6 +244,52 @@
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ADMIN */
+    .admin-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 60px; }
+    .admin-inner { width: 100%; max-width: 880px; }
+    .admin-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .admin-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    .admin-filter-bar { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 8px; margin-bottom: 16px; align-items: center; }
+    .admin-filter-bar input { height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); width: 100%; font-family: inherit; outline: none; }
+    .admin-filter-bar input:focus { border-color: var(--gold); }
+    .admin-filter-bar select { height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); font-family: inherit; outline: none; cursor: pointer; }
+    .admin-search-btn { height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); cursor: pointer; font-weight: 600; white-space: nowrap; font-family: inherit; transition: all 0.15s; }
+    .admin-search-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
+    .admin-results-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .admin-table { width: 100%; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface); }
+    .admin-table table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .admin-table th { font-size: 11px; font-weight: 700; color: var(--muted); padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); text-align: left; text-transform: uppercase; letter-spacing: 0.4px; }
+    .admin-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .admin-table tr:last-child td { border-bottom: none; }
+    .admin-data-row { cursor: pointer; transition: background 0.1s; }
+    .admin-data-row:hover td { background: var(--surface2); }
+    .admin-user-name { font-weight: 600; font-size: 13px; }
+    .admin-user-email { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .admin-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .admin-badge-green { background: #eef6ee; color: #2e6b2e; }
+    .admin-badge-amber { background: #fef3e2; color: #7a4f00; }
+    .admin-badge-gray { background: var(--surface2); color: var(--muted); }
+    .admin-badge-red { background: #fef2f2; color: #991b1b; }
+    .admin-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; display: inline-block; }
+    .admin-chevron.open { transform: rotate(90deg); }
+    .admin-drawer td { padding: 0; background: var(--surface2); }
+    .admin-drawer-inner { padding: 16px 20px; border-top: 1px solid var(--border); }
+    .admin-drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .admin-drawer-meta { font-size: 12px; color: var(--muted); }
+    .admin-copy-all-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; color: var(--text); font-weight: 600; font-family: inherit; transition: all 0.15s; }
+    .admin-copy-all-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .admin-messages { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px 0; }
+    .admin-msg { display: flex; flex-direction: column; gap: 2px; }
+    .admin-msg.user { align-items: flex-end; }
+    .admin-msg.assistant { align-items: flex-start; }
+    .admin-bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.55; }
+    .admin-bubble.user { background: var(--gold); color: #fff; border-bottom-right-radius: 3px; }
+    .admin-bubble.assistant { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 3px; }
+    .admin-msg-actions { display: flex; gap: 3px; margin-top: 2px; }
+    .admin-act-btn { font-size: 11px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 5px; background: transparent; cursor: pointer; color: var(--muted); font-family: inherit; transition: background 0.1s; }
+    .admin-act-btn:hover { background: var(--surface); color: var(--text); }
+    .admin-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; }
   </style>
 </head>
 <body>
@@ -264,6 +318,10 @@
   <div class="nav-btn" id="nav-prep" onclick="switchView('prep')">
     <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     <div class="tooltip">Prep Room</div>
+  </div>
+  <div class="nav-btn" id="nav-admin" onclick="switchView('admin')" style="display:none;">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <div class="tooltip">Admin</div>
   </div>
   <div class="nav-btn locked" id="nav-coaching" onclick="handleCoachingClick()">
     <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -312,7 +370,6 @@
       </div>
       <div id="home-state1" style="display:none;">
         <div class="state1-greeting">Your North Star is live, <span class="name" id="user-first-name-state1">—</span></div>
-        <div class="state1-subtitle">Here's your operating picture.</div>
         <div class="s1-section-label">Your destination</div>
         <div class="destination-card"><div class="destination-label">Annual arrival</div><div class="destination-value" id="s1-arrival">—</div></div>
         <div class="s1-section-label" style="margin-top:20px;">Your operating picture</div>
@@ -332,9 +389,9 @@
           <div class="scoreboard-text"><div class="scoreboard-title">Client scoreboard</div><div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div></div>
         </div>
         <div class="s1-nav-buttons">
-          <div class="s1-nav-btn" onclick="switchView('setup')">Start your setup</div>
-          <div class="s1-nav-btn" onclick="switchView('chat')">Do your daily work</div>
-          <div class="s1-nav-btn" onclick="switchView('prep')">Prep for the week / quarter</div>
+          <div class="s1-nav-btn" onclick="switchView('setup')">Restart setup</div>
+          <div class="s1-nav-btn" onclick="switchView('chat')">Daily Brief</div>
+          <div class="s1-nav-btn" onclick="switchView('prep')">Prep Room</div>
         </div>
       </div>
     </div></div>
@@ -384,6 +441,11 @@
         </div>
       </div>
       <div class="chat-input-area">
+        <div class="prefill-btns" id="prefill-chat">
+          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to see my North Star brief.')">I'd like to see my North Star brief.</button>
+          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to talk something through.')">I'd like to talk something through.</button>
+          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to build a Virtual Team playbook.')">I'd like to build a Virtual Team playbook.</button>
+        </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn" onclick="sendMessage('chat')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
@@ -409,6 +471,10 @@
         </div>
       </div>
       <div class="chat-input-area">
+        <div class="prefill-btns" id="prefill-prep">
+          <button class="prefill-btn" onclick="prefillChat('prep','I\'d like to prepare for my upcoming coaching call.')">I'd like to prepare for my upcoming coaching call.</button>
+          <button class="prefill-btn" onclick="prefillChat('prep','I\'d like to do my quarterly review.')">I'd like to do my quarterly review.</button>
+        </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-prep" onclick="sendMessage('prep')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
@@ -436,6 +502,48 @@
         <div class="account-section-header"><div class="account-section-title">Help &amp; Support</div></div>
         <a class="help-link" href="mailto:support@covetedconsultant.com?subject=North Star OS — Support"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Get help<svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg></a>
         <div class="help-link" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out<svg class="link-arrow" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div></div>
+  </div>
+
+
+  <!-- Admin (Alzay only) -->
+  <div class="view" id="view-admin">
+    <div class="admin-wrap"><div class="admin-inner">
+      <div class="admin-title">Admin</div>
+      <div class="admin-sub" id="admin-sub">Loading sessions…</div>
+      <div class="admin-filter-bar">
+        <input type="text" id="admin-search" placeholder="Search by name or email…" />
+        <select id="admin-filter-room">
+          <option value="">All rooms</option>
+          <option value="setup">Your Setup</option>
+          <option value="chat">Daily Brief</option>
+          <option value="prep">Prep Room</option>
+        </select>
+        <select id="admin-filter-date">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="0">All time</option>
+        </select>
+        <button class="admin-search-btn" onclick="adminSearch()">Search</button>
+      </div>
+      <div class="admin-results-label" id="admin-results-label"></div>
+      <div class="admin-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:22%">User</th>
+              <th style="width:14%">Date</th>
+              <th style="width:16%">Room</th>
+              <th style="width:10%;text-align:center">Messages</th>
+              <th style="width:16%">Flags</th>
+              <th style="width:4%;text-align:center"></th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody">
+            <tr><td colspan="6" class="admin-empty">Loading…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div></div>
   </div>
@@ -579,6 +687,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   session = { email, userId };
   await loadProfile(email, userId);
   await loadHomeContext();
+  await loadAdminView();
   document.getElementById('loading').style.display = 'none';
   const params = new URLSearchParams(window.location.search);
   if (params.get('celebrate') === 'true') {
@@ -708,7 +817,7 @@ async function loadDocuments(uid) { document.getElementById('acct-docs-list').in
 
 // ── NAVIGATION ────────────────────────────────────────────────────────
 function switchView(name) {
-  ['home','setup','chat','prep','account','coaching'].forEach(v => {
+  ['home','setup','chat','prep','account','coaching','admin'].forEach(v => {
     const viewEl = document.getElementById('view-' + v); if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v); if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
@@ -770,7 +879,7 @@ async function sendMessage(chatId) {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -813,7 +922,7 @@ function renderMarkdown(text) {
 const ICON_COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function appendMessage(messagesId, role, text) {
+function appendMessage(messagesId, role, text, chatId) {
   const msgs = document.getElementById(messagesId);
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   const row = document.createElement('div'); row.className = 'msg-row';
@@ -827,12 +936,22 @@ function appendMessage(messagesId, role, text) {
       navigator.clipboard.writeText(plainText).then(() => { copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); }).catch(() => { const ta = document.createElement('textarea'); ta.value = plainText; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); });
     });
     actionsEl.appendChild(copyBtn);
+    const retryBtn = document.createElement('button'); retryBtn.className = 'retry-btn'; retryBtn.title = 'Retry';
+    retryBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>';
+    retryBtn.addEventListener('click', () => { retryMessage(messagesId, chatId || ''); });
+    actionsEl.appendChild(retryBtn);
     const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
     div.appendChild(bubble); div.appendChild(actionsEl); div.appendChild(timeEl);
   } else {
     const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.textContent = text;
+    const actionsEl = document.createElement('div'); actionsEl.className = 'msg-actions';
+    const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.title = 'Copy'; copyBtn.innerHTML = ICON_COPY;
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(bubble.textContent || '').then(() => { copyBtn.classList.add('copied'); copyBtn.innerHTML = ICON_CHECK; setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.innerHTML = ICON_COPY; }, 1500); }).catch(() => {});
+    });
+    actionsEl.appendChild(copyBtn);
     const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
-    div.appendChild(bubble); div.appendChild(timeEl);
+    div.appendChild(bubble); div.appendChild(actionsEl); div.appendChild(timeEl);
   }
   row.appendChild(div); msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
   return row;
@@ -847,7 +966,199 @@ function appendTyping(messagesId) {
 }
 
 function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+
+function prefillChat(chatId, text) {
+  const inputId = chatId === 'chat' ? 'chat-input' : 'chat-input-' + chatId;
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.value = text;
+  autoResize(input);
+  input.focus();
+  const prefillId = 'prefill-' + chatId;
+  const pfEl = document.getElementById(prefillId);
+  if (pfEl) pfEl.style.display = 'none';
+}
 function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function retryMessage(messagesId, chatId) {
+  // Remove last assistant message from history and DOM, then resend
+  const hist = chatHistories[chatId];
+  if (!hist || hist.length < 2) return;
+  // Remove last assistant entry
+  const lastIdx = hist.map((m,i) => m.role === 'assistant' ? i : -1).filter(i => i >= 0).pop();
+  if (lastIdx === undefined) return;
+  hist.splice(lastIdx, 1);
+  // Remove last assistant bubble from DOM
+  const msgs = document.getElementById(messagesId);
+  const rows = msgs.querySelectorAll('.msg-row');
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].querySelector('.msg.assistant')) { rows[i].remove(); break; }
+  }
+  // Resend
+  const sendBtnId = chatId === 'chat' ? 'send-btn' : 'send-btn-' + chatId;
+  const sendBtn = document.getElementById(sendBtnId); if (sendBtn) sendBtn.disabled = true;
+  const typingEl = appendTyping(messagesId);
+  try {
+    const context = await buildContext();
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    typingEl.remove();
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const rawReply = data.message || 'Something went wrong.';
+    const { displayText } = await processReceiptBlock(rawReply, messagesId);
+    appendMessage(messagesId, 'assistant', displayText, chatId);
+    hist.push({ role: 'assistant', content: displayText });
+  } catch (err) { typingEl.remove(); appendMessage(messagesId, 'assistant', 'Connection error. Please try again.', chatId); }
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────
+const ALZAY_UUID = '39d59f4c-3c98-4469-b65c-000ee97cf913';
+let adminSessions = [];
+let adminOpenRow = null;
+
+async function loadAdminView() {
+  if (!userProfile?.id || userProfile.id !== ALZAY_UUID) return;
+  document.getElementById('nav-admin').style.display = 'flex';
+  await adminSearch();
+}
+
+async function adminSearch() {
+  const q = (document.getElementById('admin-search')?.value || '').toLowerCase();
+  const room = document.getElementById('admin-filter-room')?.value || '';
+  const days = parseInt(document.getElementById('admin-filter-date')?.value || '7');
+  const tbody = document.getElementById('admin-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">Loading…</td></tr>';
+
+  let params = 'select=user_id,room,role,content,session_key,created_at&order=created_at.desc';
+  if (days > 0) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    params += '&created_at=gte.' + since;
+  }
+  if (room) params += '&room=eq.' + room;
+
+  const rows = await sbQuery('conversation_logs', params + '&limit=500');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">No sessions found.</td></tr>';
+    document.getElementById('admin-results-label').textContent = '0 sessions';
+    return;
+  }
+
+  // Group by session_key
+  const sessions = {};
+  rows.forEach(r => {
+    const key = r.session_key || (r.user_id + '-' + r.created_at.slice(0,10) + '-' + r.room);
+    if (!sessions[key]) sessions[key] = { key, user_id: r.user_id, room: r.room, date: r.created_at.slice(0,10), messages: [] };
+    sessions[key].messages.push(r);
+  });
+
+  // Get user profiles for display
+  const userIds = [...new Set(Object.values(sessions).map(s => s.user_id))];
+  let profileMap = {};
+  try {
+    const profiles = await sbQuery('profiles', 'id=in.(' + userIds.join(',') + ')&select=id,display_name,email');
+    if (profiles) profiles.forEach(p => { profileMap[p.id] = p; });
+  } catch(e) {}
+
+  let sessionArr = Object.values(sessions).map(s => {
+    const profile = profileMap[s.user_id] || {};
+    return { ...s, display_name: profile.display_name || s.user_id, email: profile.email || '' };
+  });
+
+  // Filter by search query
+  if (q) sessionArr = sessionArr.filter(s => s.display_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q));
+
+  sessionArr.sort((a,b) => b.date.localeCompare(a.date));
+  adminSessions = sessionArr;
+
+  document.getElementById('admin-results-label').textContent = sessionArr.length + ' session' + (sessionArr.length !== 1 ? 's' : '');
+  document.getElementById('admin-sub').textContent = sessionArr.length + ' sessions found';
+  renderAdminTable(sessionArr);
+}
+
+function roomLabel(room) {
+  return { setup: 'Your Setup', chat: 'Daily Brief', prep: 'Prep Room' }[room] || room;
+}
+
+function renderAdminTable(sessions) {
+  const tbody = document.getElementById('admin-tbody');
+  if (!sessions.length) { tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">No sessions match your filters.</td></tr>'; return; }
+  tbody.innerHTML = '';
+  adminOpenRow = null;
+  sessions.forEach((s, i) => {
+    const msgCount = s.messages.length;
+    const userMsgs = s.messages.filter(m => m.role === 'user');
+    const hasBoth = s.messages.some(m => m.role === 'user') && s.messages.some(m => m.role === 'assistant');
+    const flags = !hasBoth ? 'Incomplete exchange' : '';
+    const dataRow = document.createElement('tr');
+    dataRow.className = 'admin-data-row';
+    dataRow.innerHTML =
+      '<td><div class="admin-user-name">' + esc(s.display_name) + '</div><div class="admin-user-email">' + esc(s.email) + '</div></td>' +
+      '<td>' + s.date + '</td>' +
+      '<td>' + roomLabel(s.room) + '</td>' +
+      '<td style="text-align:center">' + msgCount + '</td>' +
+      '<td><span style="font-size:11px;color:' + (flags ? '#991b1b' : 'var(--muted)') + ';">' + (flags || '—') + '</span></td>' +
+      '<td style="text-align:center"><span class="admin-chevron" id="achev-' + i + '">›</span></td>';
+    dataRow.addEventListener('click', () => toggleAdminDrawer(i, s));
+    tbody.appendChild(dataRow);
+    const drawerRow = document.createElement('tr');
+    drawerRow.className = 'admin-drawer';
+    drawerRow.id = 'adrawer-' + i;
+    drawerRow.style.display = 'none';
+    const drawerTd = document.createElement('td'); drawerTd.colSpan = 6;
+    drawerTd.innerHTML = buildAdminDrawer(s, i);
+    drawerRow.appendChild(drawerTd);
+    tbody.appendChild(drawerRow);
+  });
+}
+
+function buildAdminDrawer(s, i) {
+  const msgs = s.messages.sort((a,b) => a.created_at.localeCompare(b.created_at)).map(m => {
+    const copyId = 'acopy-' + i + '-' + Math.random().toString(36).slice(2);
+    return '<div class="admin-msg ' + m.role + '">' +
+      '<div class="admin-bubble ' + m.role + '">' + esc(m.content) + '</div>' +
+      '<div class="admin-msg-actions"><button class="admin-act-btn" onclick="adminCopyMsg(this,' + JSON.stringify(m.content) + ')">Copy</button></div>' +
+      '</div>';
+  }).join('');
+
+  return '<div class="admin-drawer-inner">' +
+    '<div class="admin-drawer-header">' +
+    '<span class="admin-drawer-meta">' + roomLabel(s.room) + ' · ' + s.date + ' · ' + s.messages.length + ' messages</span>' +
+    '<button class="admin-copy-all-btn" onclick="adminCopyAll(' + i + ')">Copy full conversation</button>' +
+    '</div>' +
+    '<div class="admin-messages">' + msgs + '</div>' +
+    '</div>';
+}
+
+function toggleAdminDrawer(i, s) {
+  const drawer = document.getElementById('adrawer-' + i);
+  const chev = document.getElementById('achev-' + i);
+  const isOpen = drawer.style.display !== 'none';
+  if (adminOpenRow !== null && adminOpenRow !== i) {
+    const prev = document.getElementById('adrawer-' + adminOpenRow);
+    const prevChev = document.getElementById('achev-' + adminOpenRow);
+    if (prev) prev.style.display = 'none';
+    if (prevChev) prevChev.classList.remove('open');
+  }
+  drawer.style.display = isOpen ? 'none' : 'table-row';
+  chev.classList.toggle('open', !isOpen);
+  adminOpenRow = isOpen ? null : i;
+}
+
+function adminCopyMsg(btn, text) {
+  navigator.clipboard.writeText(text).then(() => { const orig = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = orig, 1500); }).catch(() => {});
+}
+
+function adminCopyAll(idx) {
+  const s = adminSessions[idx];
+  if (!s) return;
+  const sorted = s.messages.slice().sort((a,b) => a.created_at.localeCompare(b.created_at));
+  const text = sorted.map(m => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = orig, 1500);
+  }).catch(() => {});
+}
 </script>
 </body>
 </html>
