@@ -4,6 +4,7 @@
 // CS-1, CS-9, CS-Receipt load on-demand as before.
 // AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
 // and writes the row to annual_operating_picture before returning the response.
+// Conversation logging: every user+assistant exchange is written to conversation_logs.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -34,20 +35,17 @@ async function hasOperatingPicture(userId) {
 }
 
 async function writeAOP(aopData) {
-  // Validate user_id is a UUID — never allow name/email as filter
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!aopData.user_id || !uuidPattern.test(aopData.user_id)) {
     throw new Error('AOP write rejected: user_id must be a valid UUID');
   }
 
-  // Check if row already exists — upsert by user_id
   const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${aopData.user_id}&select=id&limit=1`, {
     headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
   });
   const existing = await checkRes.json();
 
   if (existing && existing.length > 0) {
-    // Update existing row
     const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture?user_id=eq.${aopData.user_id}`, {
       method: 'PATCH',
       headers: {
@@ -61,7 +59,6 @@ async function writeAOP(aopData) {
     if (!patchRes.ok) throw new Error('AOP PATCH failed: ' + await patchRes.text());
     return await patchRes.json();
   } else {
-    // Insert new row
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/annual_operating_picture`, {
       method: 'POST',
       headers: {
@@ -85,12 +82,43 @@ function extractAndWriteAOP(text, userId) {
   const jsonStr = text.slice(start + '%%AOP%%'.length, end).trim();
   try {
     const aopData = JSON.parse(jsonStr);
-    // Always enforce the server-side userId — never trust what the model put in user_id
     aopData.user_id = userId;
     return aopData;
   } catch (e) {
     console.error('AOP JSON parse failed:', e, 'Raw:', jsonStr);
     return null;
+  }
+}
+
+// ── CONVERSATION LOG WRITE ─────────────────────────────────────────────
+async function writeConversationLog(userId, room, userMessage, assistantMessage, sessionKey) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) {
+    console.error('Conversation log rejected: invalid userId');
+    return;
+  }
+
+  const rows = [
+    { user_id: userId, room, role: 'user', content: userMessage, session_key: sessionKey },
+    { user_id: userId, room, role: 'assistant', content: assistantMessage, session_key: sessionKey }
+  ];
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/conversation_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(rows)
+    });
+    if (!res.ok) {
+      console.error('Conversation log write failed:', await res.text());
+    }
+  } catch (err) {
+    console.error('Conversation log write error:', err);
   }
 }
 
@@ -161,18 +189,16 @@ exports.handler = async (event) => {
   if (!ANTHROPIC_API_KEY) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'API key not configured' }) };
 
   try {
-    const { messages, context, userName, userId } = JSON.parse(event.body);
+    const { messages, context, userName, userId, room } = JSON.parse(event.body);
 
     const hasOP = await hasOperatingPicture(userId);
     let systemPrompt;
 
     if (!hasOP) {
-      // New user — no operating picture yet → fire CS-11 onboarding
       const cs11Prompt = await getPrompt('cs-11');
       if (!cs11Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-11 not found in Supabase' }) };
       systemPrompt = cs11Prompt;
     } else {
-      // Returning user — operating picture exists → load CS-12
       const cs12Prompt = await getPrompt('cs-12');
       if (!cs12Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-12 not found in Supabase' }) };
       systemPrompt = cs12Prompt;
@@ -221,8 +247,6 @@ exports.handler = async (event) => {
     const message = data.content?.[0]?.text || 'No response received.';
 
     // ── AOP WRITE ─────────────────────────────────────────────────────
-    // If the response contains %%AOP%%...%%END_AOP%%, extract and write to Supabase.
-    // This is the authoritative write path for CS-11 onboarding completion.
     if (message.includes('%%AOP%%') && message.includes('%%END_AOP%%') && userId) {
       const aopData = extractAndWriteAOP(message, userId);
       if (aopData) {
@@ -230,9 +254,26 @@ exports.handler = async (event) => {
           await writeAOP(aopData);
           console.log('AOP row written for user:', userId);
         } catch (aopErr) {
-          // Log but don't fail the response — user still gets the celebration message
           console.error('AOP write failed:', aopErr);
         }
+      }
+    }
+
+    // ── CONVERSATION LOG WRITE ─────────────────────────────────────────
+    if (userId && messages && messages.length > 0) {
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg && lastUserMsg.content !== '__AUTOSTART__') {
+        const today = new Date().toISOString().slice(0, 10);
+        const roomName = room || 'unknown';
+        const sessionKey = `${userId}-${today}-${roomName}`;
+        const cleanMessage = message
+          .replace(/%%AOP%%[\s\S]*?%%END_AOP%%/g, '')
+          .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
+          .replace(/\[NORTH_STAR_COMPLETE\]/g, '')
+          .trim();
+        writeConversationLog(userId, roomName, lastUserMsg.content, cleanMessage, sessionKey).catch(err => {
+          console.error('Conversation log fire-and-forget error:', err);
+        });
       }
     }
 
