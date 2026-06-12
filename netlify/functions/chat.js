@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-12-d
+// deploy: 2026-06-12-e
 // Routing by room:
 //   room=setup → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
 //   room=chat  → chat-b (Daily Brief / Chief of Staff agent)
@@ -183,6 +183,8 @@ function csReceiptShouldLoad(messages) {
   const userMessages = messages.filter(m => m.role === 'user');
   if (userMessages.length === 0) return false;
   const lastUserMsg = userMessages[userMessages.length - 1].content.toLowerCase().trim();
+  // Also trigger if the user mentions "receipt" in any form
+  if (lastUserMsg.includes('receipt')) return true;
   return closeSignals.some(s => lastUserMsg.includes(s));
 }
 
