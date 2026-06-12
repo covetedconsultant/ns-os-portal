@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-12-e
+// deploy: 2026-06-12-f
 // Routing by room:
 //   room=setup → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
 //   room=chat  → chat-b (Daily Brief / Chief of Staff agent)
@@ -93,7 +93,7 @@ function extractAndWriteAOP(text, userId) {
   }
 }
 
-// ── CONVERSATION LOG WRITE ──────────────────────────────────────────────────────
+// ── CONVERSATION LOG WRITE ──────────────────────────────────────────────
 async function writeConversationLog(userId, room, userMessage, assistantMessage, sessionKey) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!userId || !uuidPattern.test(userId)) {
@@ -188,6 +188,114 @@ function csReceiptShouldLoad(messages) {
   return closeSignals.some(s => lastUserMsg.includes(s));
 }
 
+// ── SESSION START: CHECK FOR ORPHANED SESSION, WRITE PARTIAL RECEIPT ────────────
+// Called on first user message of each room session.
+// If the user's last session for this room ended without a receipt, synthesize
+// a partial receipt from conversation_logs and write it with completion_status='incomplete'.
+// Returns acknowledgment text to prepend to the CoS context (or null if nothing to acknowledge).
+async function checkAndWritePartialReceipt(userId, room) {
+  try {
+    // 1. Find most recent receipt for this user+room
+    const receiptRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/session_receipts?user_id=eq.${userId}&room_id=eq.north-star-room&select=session_date,completion_status,receipt_number&order=session_date.desc&limit=1`,
+      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const receipts = await receiptRes.json();
+    const lastReceipt = receipts?.[0] || null;
+    const lastReceiptDate = lastReceipt?.session_date || null;
+    const lastReceiptStatus = lastReceipt?.completion_status || null;
+
+    // 2. Find conversation_logs for this user+room that post-date the last receipt (or all if no receipt)
+    let logsFilter = `user_id=eq.${userId}&room=eq.${room}&select=role,content,session_key,created_at&order=created_at.asc`;
+    if (lastReceiptDate) {
+      // Only look at logs from after the last receipt date
+      logsFilter += `&created_at=gt.${lastReceiptDate}T23:59:59.999Z`;
+    }
+    const logsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/conversation_logs?${logsFilter}&limit=100`,
+      { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const logs = await logsRes.json();
+
+    // 3. If no orphaned logs — nothing to do
+    if (!logs || logs.length === 0) return null;
+
+    // 4. Determine which session_key(s) these belong to — take the most recent distinct session_key
+    const sessionKeys = [...new Set(logs.map(l => l.session_key).filter(Boolean))];
+    if (sessionKeys.length === 0) return null;
+
+    // Get logs for the most recent orphaned session only
+    const mostRecentKey = sessionKeys[sessionKeys.length - 1];
+    const sessionLogs = logs.filter(l => l.session_key === mostRecentKey);
+
+    // Extract the date from the session key (format: userId-YYYY-MM-DD-room)
+    const keyParts = mostRecentKey.split('-');
+    // session_key = UUID(5 parts)-YYYY-MM-DD-room → date is at index 5,6,7
+    let orphanDate = null;
+    if (keyParts.length >= 8) {
+      orphanDate = `${keyParts[5]}-${keyParts[6]}-${keyParts[7]}`;
+    } else {
+      orphanDate = new Date().toISOString().slice(0, 10);
+    }
+
+    // 5. Synthesize a brief partial receipt using Claude
+    const transcript = sessionLogs.map(l => `${l.role}: ${l.content}`).join('\n').slice(0, 3000);
+    const synthRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 300,
+        system: 'You are a session summarizer. Output ONLY a JSON object with these exact fields: {"session_scope":"one sentence describing what was discussed","bronze_task":"main task or topic","thread_tag":"one-word-slug"}. No other text.',
+        messages: [{ role: 'user', content: 'Summarize this conversation:\n\n' + transcript }]
+      })
+    });
+    const synthData = await synthRes.json();
+    let fields = { session_scope: 'Session cut short — no receipt written', bronze_task: 'Unknown', thread_tag: 'incomplete' };
+    try {
+      const raw = synthData.content?.[0]?.text || '{}';
+      const parsed = JSON.parse(raw);
+      if (parsed.session_scope) fields = parsed;
+    } catch(e) {}
+
+    // 6. Write the partial receipt to Supabase
+    const partialPayload = {
+      user_id: userId,
+      session_date: orphanDate,
+      room_id: 'north-star-room',
+      receipt_number: null,
+      session_scope: fields.session_scope,
+      bronze_task: fields.bronze_task,
+      bronze_status: 'incomplete',
+      completion_status: 'incomplete',
+      trigger_context: 'auto_partial',
+      outcome_type: 'session_cut_short',
+      thread_tag: fields.thread_tag,
+      rooms_visited: room === 'chat' ? 'Daily Brief' : room === 'prep' ? 'Prep Room' : 'Setup',
+      carried_forward: 'Session ended without a receipt — context preserved above'
+    };
+    const writeRes = await fetch(`${SUPABASE_URL}/rest/v1/session_receipts`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(partialPayload)
+    });
+    if (!writeRes.ok) {
+      console.error('Partial receipt write failed:', await writeRes.text());
+      return null;
+    }
+
+    // 7. Return acknowledgment text to prepend to CoS context
+    return `[SYSTEM NOTE — DO NOT DISPLAY VERBATIM: The user's last ${room === 'chat' ? 'Daily Brief' : 'Prep Room'} session on ${orphanDate} ended without a receipt — it was cut short. A partial receipt has been written automatically. On your FIRST response this session, briefly acknowledge that your last conversation together didn't get a proper close, and invite them to continue from where they left off or start fresh. Keep it conversational — one or two sentences, no drama.]`;
+
+  } catch (err) {
+    console.error('checkAndWritePartialReceipt error:', err);
+    return null;
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: corsHeaders(), body: '' };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
@@ -198,7 +306,7 @@ exports.handler = async (event) => {
 
     let systemPrompt;
 
-    // ── ROOM-BASED ROUTING ─────────────────────────────────────────────────────
+    // ── ROOM-BASED ROUTING ────────────────────────────────────────────────────────────────────────────
     if (room === 'chat') {
       // Daily Brief — always loads chat-b
       const chatBPrompt = await getPrompt('chat-b');
@@ -249,6 +357,18 @@ exports.handler = async (event) => {
       }
     }
 
+    // ── SESSION START CHECK: partial receipt synthesis ─────────────────────────────────────────
+    // On the first user message of a session (only one user message so far),
+    // check if the previous session ended without a receipt. If so, synthesize
+    // a partial receipt and prepend an acknowledgment note to the system prompt.
+    const isFirstMessage = messages.filter(m => m.role === 'user').length === 1;
+    if (isFirstMessage && userId && (room === 'chat' || room === 'prep')) {
+      const acknowledgment = await checkAndWritePartialReceipt(userId, room);
+      if (acknowledgment) {
+        systemPrompt = acknowledgment + '\n\n' + systemPrompt;
+      }
+    }
+
     const contextStr = buildContextString(context);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -269,7 +389,7 @@ exports.handler = async (event) => {
     const data = await response.json();
     const message = data.content?.[0]?.text || 'No response received.';
 
-    // ── AOP WRITE ────────────────────────────────────────────────────────────
+    // ── AOP WRITE ────────────────────────────────────────────────────────────────────────────
     if (message.includes('%%AOP%%') && message.includes('%%END_AOP%%') && userId) {
       const aopData = extractAndWriteAOP(message, userId);
       if (aopData) {
@@ -282,7 +402,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // ── CONVERSATION LOG WRITE ───────────────────────────────────────────────────
+    // ── CONVERSATION LOG WRITE ─────────────────────────────────────────────────────────────────────────
     if (userId && messages && messages.length > 0) {
       const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
       if (lastUserMsg && lastUserMsg.content !== '__AUTOSTART__') {
