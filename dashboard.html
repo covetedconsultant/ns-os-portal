@@ -64,6 +64,7 @@
     .receipts-table td { padding: 12px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .receipts-table tr:hover td { background: var(--surface2); cursor: pointer; }
     .receipt-number { font-size: 11px; font-weight: 600; color: var(--gold); font-family: monospace; }
+    .receipt-incomplete-badge { font-size: 10px; font-weight: 700; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 3px; padding: 2px 5px; letter-spacing: 0.04em; font-family: monospace; }
     .receipt-date { color: var(--text2); white-space: nowrap; }
     .receipt-scope { color: var(--text); line-height: 1.4; }
     .receipt-thread { font-size: 11px; color: var(--muted); white-space: nowrap; }
@@ -582,7 +583,7 @@ async function loadReceiptsView() {
   try {
     const cutoff = receiptsAllLoaded ? '' : `&session_date=gte.${thirtyDaysAgo()}`;
     const rows = await sbQuery('session_receipts',
-      `user_id=eq.${userProfile.id}${cutoff}&order=session_date.desc&select=receipt_number,session_date,session_scope,bronze_task,bronze_status,thread_tag,carried_forward`
+      `user_id=eq.${userProfile.id}${cutoff}&order=session_date.desc&select=receipt_number,session_date,session_scope,bronze_task,bronze_status,thread_tag,carried_forward,completion_status`
     );
     if (!rows || rows.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4"><div class="receipts-empty">No sessions logged yet.<br>Complete a session to see your first receipt here.</div></td></tr>';
@@ -595,9 +596,13 @@ async function loadReceiptsView() {
       const rowId = `receipt-row-${idx}`;
       const dateStr = r.session_date ? new Date(r.session_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
       const scope = r.session_scope ? (r.session_scope.length > 80 ? r.session_scope.slice(0, 80) + '…' : r.session_scope) : '—';
+      const isIncomplete = !r.receipt_number || r.completion_status === 'incomplete';
+      const receiptCell = isIncomplete
+        ? `<span class="receipt-incomplete-badge">INCOMPLETE</span>`
+        : `<span class="receipt-number">${esc(r.receipt_number)}</span>`;
       return `<tr id="${rowId}" onclick="toggleReceiptDetail('${rowId}','${detailId}')">
         <td><span class="receipt-date">${esc(dateStr)}</span></td>
-        <td><span class="receipt-number">${esc(r.receipt_number || '—')}</span></td>
+        <td>${receiptCell}</td>
         <td><span class="receipt-scope">${esc(scope)}</span></td>
         <td><span class="receipt-thread">${esc(r.thread_tag || '—')}</span></td>
       </tr>
@@ -694,10 +699,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadAdminView();
   document.getElementById('loading').style.display = 'none';
   const params = new URLSearchParams(window.location.search);
-  // Restore any in-progress session from today (thread continuity)
-  if (!params.get('celebrate') && !params.get('new')) {
-    await restoreConversationThread('chat');
-  }
+  // Thread restore removed — rooms always open fresh.
+  // The CoS acknowledges any unreceipted session on the first message of the next session.
   if (params.get('celebrate') === 'true') {
     // Wait a beat for the AOP row to be fully committed, then reload home context
     setTimeout(async () => {
