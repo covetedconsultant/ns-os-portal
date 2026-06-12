@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-12-g -->
+  <!-- cache-bust: 2026-06-12-h -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -772,9 +772,8 @@ async function restoreConversationThread(room) {
     );
     if (!rows || rows.length === 0) return;
     // Rebuild chatHistories so the CoS has full context on the next send
+    // Do NOT call switchView — restore silently, user stays on home
     chatHistories[room] = rows.map(r => ({ role: r.role, content: r.content }));
-    // Switch to the room and render messages
-    switchView(room);
     const msgs = document.getElementById(messagesId);
     if (msgs) {
       msgs.innerHTML = '';
