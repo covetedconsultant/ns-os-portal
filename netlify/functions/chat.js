@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-12-f
+// deploy: 2026-06-12-g
 // Routing by room:
 //   room=setup → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
 //   room=chat  → chat-b (Daily Brief / Chief of Staff agent)
@@ -7,7 +7,8 @@
 // CS-1, CS-9, CS-Receipt load on-demand inside chat (room=chat) only.
 // AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
 // and writes the row to annual_operating_picture before returning the response.
-// Conversation logging: every user+assistant exchange is written to conversation_logs.
+// Conversation logging: user message written BEFORE Anthropic call; assistant message written after.
+// Same-day restore: response includes hasLogsToday flag so frontend can restore thread if same day.
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -93,19 +94,17 @@ function extractAndWriteAOP(text, userId) {
   }
 }
 
-// ── CONVERSATION LOG WRITE ──────────────────────────────────────────────
-async function writeConversationLog(userId, room, userMessage, assistantMessage, sessionKey) {
+// ── CONVERSATION LOG WRITE ──────────────────────────────────────────────────────
+// Split into two functions: user message written BEFORE Anthropic call,
+// assistant message written AFTER. This ensures at least the user's message
+// is captured even if the function times out during the Anthropic call.
+
+async function writeUserMessageLog(userId, room, userMessage, sessionKey) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!userId || !uuidPattern.test(userId)) {
     console.error('Conversation log rejected: invalid userId');
     return;
   }
-
-  const rows = [
-    { user_id: userId, room, role: 'user', content: userMessage, session_key: sessionKey },
-    { user_id: userId, room, role: 'assistant', content: assistantMessage, session_key: sessionKey }
-  ];
-
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/conversation_logs`, {
       method: 'POST',
@@ -115,13 +114,31 @@ async function writeConversationLog(userId, room, userMessage, assistantMessage,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify(rows)
+      body: JSON.stringify([{ user_id: userId, room, role: 'user', content: userMessage, session_key: sessionKey }])
     });
-    if (!res.ok) {
-      console.error('Conversation log write failed:', await res.text());
-    }
+    if (!res.ok) console.error('User message log write failed:', await res.text());
   } catch (err) {
-    console.error('Conversation log write error:', err);
+    console.error('User message log write error:', err);
+  }
+}
+
+async function writeAssistantMessageLog(userId, room, assistantMessage, sessionKey) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/conversation_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify([{ user_id: userId, room, role: 'assistant', content: assistantMessage, session_key: sessionKey }])
+    });
+    if (!res.ok) console.error('Assistant message log write failed:', await res.text());
+  } catch (err) {
+    console.error('Assistant message log write error:', err);
   }
 }
 
@@ -183,19 +200,13 @@ function csReceiptShouldLoad(messages) {
   const userMessages = messages.filter(m => m.role === 'user');
   if (userMessages.length === 0) return false;
   const lastUserMsg = userMessages[userMessages.length - 1].content.toLowerCase().trim();
-  // Also trigger if the user mentions "receipt" in any form
   if (lastUserMsg.includes('receipt')) return true;
   return closeSignals.some(s => lastUserMsg.includes(s));
 }
 
-// ── SESSION START: CHECK FOR ORPHANED SESSION, WRITE PARTIAL RECEIPT ────────────
-// Called on first user message of each room session.
-// If the user's last session for this room ended without a receipt, synthesize
-// a partial receipt from conversation_logs and write it with completion_status='incomplete'.
-// Returns acknowledgment text to prepend to the CoS context (or null if nothing to acknowledge).
+// ── SESSION START: CHECK FOR ORPHANED SESSION, WRITE PARTIAL RECEIPT ──────────
 async function checkAndWritePartialReceipt(userId, room) {
   try {
-    // 1. Find most recent receipt for this user+room
     const receiptRes = await fetch(
       `${SUPABASE_URL}/rest/v1/session_receipts?user_id=eq.${userId}&room_id=eq.north-star-room&select=session_date,completion_status,receipt_number&order=session_date.desc&limit=1`,
       { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
@@ -203,12 +214,9 @@ async function checkAndWritePartialReceipt(userId, room) {
     const receipts = await receiptRes.json();
     const lastReceipt = receipts?.[0] || null;
     const lastReceiptDate = lastReceipt?.session_date || null;
-    const lastReceiptStatus = lastReceipt?.completion_status || null;
 
-    // 2. Find conversation_logs for this user+room that post-date the last receipt (or all if no receipt)
     let logsFilter = `user_id=eq.${userId}&room=eq.${room}&select=role,content,session_key,created_at&order=created_at.asc`;
     if (lastReceiptDate) {
-      // Only look at logs from after the last receipt date
       logsFilter += `&created_at=gt.${lastReceiptDate}T23:59:59.999Z`;
     }
     const logsRes = await fetch(
@@ -217,20 +225,15 @@ async function checkAndWritePartialReceipt(userId, room) {
     );
     const logs = await logsRes.json();
 
-    // 3. If no orphaned logs — nothing to do
     if (!logs || logs.length === 0) return null;
 
-    // 4. Determine which session_key(s) these belong to — take the most recent distinct session_key
     const sessionKeys = [...new Set(logs.map(l => l.session_key).filter(Boolean))];
     if (sessionKeys.length === 0) return null;
 
-    // Get logs for the most recent orphaned session only
     const mostRecentKey = sessionKeys[sessionKeys.length - 1];
     const sessionLogs = logs.filter(l => l.session_key === mostRecentKey);
 
-    // Extract the date from the session key (format: userId-YYYY-MM-DD-room)
     const keyParts = mostRecentKey.split('-');
-    // session_key = UUID(5 parts)-YYYY-MM-DD-room → date is at index 5,6,7
     let orphanDate = null;
     if (keyParts.length >= 8) {
       orphanDate = `${keyParts[5]}-${keyParts[6]}-${keyParts[7]}`;
@@ -238,7 +241,6 @@ async function checkAndWritePartialReceipt(userId, room) {
       orphanDate = new Date().toISOString().slice(0, 10);
     }
 
-    // 5. Synthesize a brief partial receipt using Claude
     const transcript = sessionLogs.map(l => `${l.role}: ${l.content}`).join('\n').slice(0, 3000);
     const synthRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -258,7 +260,6 @@ async function checkAndWritePartialReceipt(userId, room) {
       if (parsed.session_scope) fields = parsed;
     } catch(e) {}
 
-    // 6. Write the partial receipt to Supabase
     const partialPayload = {
       user_id: userId,
       session_date: orphanDate,
@@ -287,7 +288,6 @@ async function checkAndWritePartialReceipt(userId, room) {
       return null;
     }
 
-    // 7. Return acknowledgment text to prepend to CoS context
     return `[SYSTEM NOTE — DO NOT DISPLAY VERBATIM: The user's last ${room === 'chat' ? 'Daily Brief' : 'Prep Room'} session on ${orphanDate} ended without a receipt — it was cut short. A partial receipt has been written automatically. On your FIRST response this session, briefly acknowledge that your last conversation together didn't get a proper close, and invite them to continue from where they left off or start fresh. Keep it conversational — one or two sentences, no drama.]`;
 
   } catch (err) {
@@ -306,14 +306,11 @@ exports.handler = async (event) => {
 
     let systemPrompt;
 
-    // ── ROOM-BASED ROUTING ────────────────────────────────────────────────────────────────────────────
     if (room === 'chat') {
-      // Daily Brief — always loads chat-b
       const chatBPrompt = await getPrompt('chat-b');
       if (!chatBPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'chat-b prompt not found in Supabase' }) };
       systemPrompt = chatBPrompt;
 
-      // On-demand loaders for Daily Brief only
       if (userSelectedOptionB(messages)) {
         const cs1Prompt = await getPrompt('cs-1');
         if (cs1Prompt) systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
@@ -337,15 +334,12 @@ exports.handler = async (event) => {
       }
 
     } else if (room === 'prep') {
-      // Prep Room — always loads chat-c
       const chatCPrompt = await getPrompt('chat-c');
       if (!chatCPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'chat-c prompt not found in Supabase' }) };
       systemPrompt = chatCPrompt;
 
     } else {
-      // Setup room (or unknown) — AOP-based routing: CS-11 or CS-12
       const hasOP = await hasOperatingPicture(userId);
-
       if (!hasOP) {
         const cs11Prompt = await getPrompt('cs-11');
         if (!cs11Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-11 not found in Supabase' }) };
@@ -357,15 +351,24 @@ exports.handler = async (event) => {
       }
     }
 
-    // ── SESSION START CHECK: partial receipt synthesis ─────────────────────────────────────────
-    // On the first user message of a session (only one user message so far),
-    // check if the previous session ended without a receipt. If so, synthesize
-    // a partial receipt and prepend an acknowledgment note to the system prompt.
     const isFirstMessage = messages.filter(m => m.role === 'user').length === 1;
     if (isFirstMessage && userId && (room === 'chat' || room === 'prep')) {
       const acknowledgment = await checkAndWritePartialReceipt(userId, room);
       if (acknowledgment) {
         systemPrompt = acknowledgment + '\n\n' + systemPrompt;
+      }
+    }
+
+    // ── WRITE USER MESSAGE BEFORE ANTHROPIC CALL ─────────────────────────────
+    let sessionKey = null;
+    let lastUserMsg = null;
+    if (userId && messages && messages.length > 0) {
+      lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg && lastUserMsg.content !== '__AUTOSTART__') {
+        const today = new Date().toISOString().slice(0, 10);
+        const roomName = room || 'unknown';
+        sessionKey = `${userId}-${today}-${roomName}`;
+        await writeUserMessageLog(userId, roomName, lastUserMsg.content, sessionKey);
       }
     }
 
@@ -389,7 +392,6 @@ exports.handler = async (event) => {
     const data = await response.json();
     const message = data.content?.[0]?.text || 'No response received.';
 
-    // ── AOP WRITE ────────────────────────────────────────────────────────────────────────────
     if (message.includes('%%AOP%%') && message.includes('%%END_AOP%%') && userId) {
       const aopData = extractAndWriteAOP(message, userId);
       if (aopData) {
@@ -402,25 +404,19 @@ exports.handler = async (event) => {
       }
     }
 
-    // ── CONVERSATION LOG WRITE ─────────────────────────────────────────────────────────────────────────
-    if (userId && messages && messages.length > 0) {
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-      if (lastUserMsg && lastUserMsg.content !== '__AUTOSTART__') {
-        const today = new Date().toISOString().slice(0, 10);
-        const roomName = room || 'unknown';
-        const sessionKey = `${userId}-${today}-${roomName}`;
-        const cleanMessage = message
-          .replace(/%%AOP%%[\s\S]*?%%END_AOP%%/g, '')
-          .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
-          .replace(/\[NORTH_STAR_COMPLETE\]/g, '')
-          .trim();
-        writeConversationLog(userId, roomName, lastUserMsg.content, cleanMessage, sessionKey).catch(err => {
-          console.error('Conversation log fire-and-forget error:', err);
-        });
-      }
+    // ── WRITE ASSISTANT MESSAGE AFTER ANTHROPIC RESPONSE ────────────────────────
+    if (sessionKey && lastUserMsg) {
+      const cleanMessage = message
+        .replace(/%%AOP%%[\s\S]*?%%END_AOP%%/g, '')
+        .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
+        .replace(/\[NORTH_STAR_COMPLETE\]/g, '')
+        .trim();
+      writeAssistantMessageLog(userId, room || 'unknown', cleanMessage, sessionKey).catch(err => {
+        console.error('Assistant log fire-and-forget error:', err);
+      });
     }
 
-    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message }) };
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message, hasLogsToday: !!sessionKey }) };
 
   } catch (err) {
     console.error('Chat function error:', err);
