@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-11i -->
+  <!-- cache-bust: 2026-06-12-f -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -699,6 +699,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadAdminView();
   document.getElementById('loading').style.display = 'none';
   const params = new URLSearchParams(window.location.search);
+  // Restore any in-progress session from today (thread continuity)
+  if (!params.get('celebrate') && !params.get('new')) {
+    await restoreConversationThread('chat');
+  }
   if (params.get('celebrate') === 'true') {
     // Wait a beat for the AOP row to be fully committed, then reload home context
     setTimeout(async () => {
@@ -759,6 +763,38 @@ async function sbPatch(table, params, payload) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('Supabase patch failed: ' + await res.text());
   return res.json();
+}
+
+// ── THREAD CONTINUITY ────────────────────────────────────────────────
+async function restoreConversationThread(room) {
+  if (!userProfile?.id) return;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const sessionKey = `${userProfile.id}-${today}-${room}`;
+  const messagesId = room === 'chat' ? 'messages-chat' : 'messages-' + room;
+  try {
+    const rows = await sbQuery('conversation_logs',
+      `session_key=eq.${sessionKey}&select=role,content&order=created_at.asc`
+    );
+    if (!rows || rows.length === 0) return;
+    // Rebuild chatHistories so the CoS has full context on the next send
+    chatHistories[room] = rows.map(r => ({ role: r.role, content: r.content }));
+    // Switch to the room and render messages
+    switchView(room);
+    const msgs = document.getElementById(messagesId);
+    if (msgs) {
+      msgs.innerHTML = '';
+      rows.forEach(r => appendMessage(messagesId, r.role, r.content, room));
+    }
+    // Show a subtle resume indicator
+    const resumeEl = document.createElement('div');
+    resumeEl.className = 'resume-banner';
+    resumeEl.textContent = 'Session resumed';
+    resumeEl.style.cssText = 'text-align:center;font-size:0.75rem;color:var(--text-muted,#888);padding:6px 0 2px;';
+    const msgsEl = document.getElementById(messagesId);
+    if (msgsEl) msgsEl.insertBefore(resumeEl, msgsEl.firstChild);
+  } catch (err) {
+    console.error('Thread restore failed:', err);
+  }
 }
 
 // ── PROFILE ──────────────────────────────────────────────────────────
