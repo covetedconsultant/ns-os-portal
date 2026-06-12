@@ -124,6 +124,10 @@
     .s1-card-value.large { font-size: 20px; font-weight: 600; }
     .s1-revenue-badge { display: inline-block; background: #eef6ee; border: 1px solid #c3dfc3; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #2e6b2e; margin-top: 6px; }
     .s1-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .s1-section-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 10px; margin-top: 24px; user-select: none; }
+    .s1-section-toggle:hover .scoreboard-chevron { color: var(--gold); }
+    .scoreboard-chevron { font-size: 14px; color: var(--muted); transition: transform 0.2s; }
+    .scoreboard-chevron.collapsed { transform: rotate(-90deg); }
     .scoreboard-dormant { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 20px 18px; display: flex; align-items: center; gap: 16px; }
     .scoreboard-slots { display: flex; gap: 7px; flex-shrink: 0; }
     .scoreboard-slot { width: 32px; height: 32px; border-radius: 7px; background: var(--surface2); border: 1px dashed var(--border); }
@@ -383,15 +387,20 @@
           <div class="s1-card"><div class="s1-card-label">Pattern to watch</div><div class="s1-card-value" id="s1-pattern">—</div></div>
           <div class="s1-card"><div class="s1-card-label">First focus this week</div><div class="s1-card-value" id="s1-first-focus">—</div></div>
         </div>
-        <div class="s1-section-label">Scoreboard</div>
-        <div class="scoreboard-dormant">
-          <div class="scoreboard-slots"><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div></div>
-          <div class="scoreboard-text"><div class="scoreboard-title">Client scoreboard</div><div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div></div>
+        <div class="s1-section-toggle" onclick="toggleScoreboard()" id="scoreboard-toggle-row">
+          <span class="s1-section-label" style="margin:0;">Scoreboard</span>
+          <span class="scoreboard-chevron" id="scoreboard-chevron">▾</span>
+        </div>
+        <div id="scoreboard-body">
+          <div class="scoreboard-dormant">
+            <div class="scoreboard-slots"><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div></div>
+            <div class="scoreboard-text"><div class="scoreboard-title">Client scoreboard</div><div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div></div>
+          </div>
         </div>
         <div class="s1-nav-buttons">
-          <div class="s1-nav-btn" onclick="switchView('setup')">Restart setup</div>
           <div class="s1-nav-btn" onclick="switchView('chat')">Daily Brief</div>
-          <div class="s1-nav-btn" onclick="switchView('prep')">Prep Room</div>
+          <div class="s1-nav-btn" onclick="switchView('prep')">Weekly / Quarterly</div>
+          <div class="s1-nav-btn" onclick="switchView('setup')">Restart setup</div>
         </div>
       </div>
     </div></div>
@@ -803,7 +812,12 @@ async function loadHomeContext() {
     }
     if (aop.gold_standard_business_picture) {
       let bestResult = aop.gold_standard_business_picture;
-      try { const parsed = typeof bestResult === 'string' ? JSON.parse(bestResult) : bestResult; bestResult = parsed.case_study || parsed.proof || JSON.stringify(parsed); } catch (e) {}
+      try {
+        const parsed = typeof bestResult === 'string' ? JSON.parse(bestResult) : bestResult;
+        if (typeof parsed === 'object' && parsed !== null) {
+          bestResult = parsed.case_study || parsed.proof || parsed.result || parsed.summary || Object.values(parsed).find(v => typeof v === 'string' && v.length > 20) || bestResult;
+        }
+      } catch (e) {}
       setText('s1-best-result', bestResult);
     }
     setText('s1-pattern', aop.limiting_belief_raw);
@@ -813,6 +827,13 @@ async function loadHomeContext() {
 }
 
 function setText(id, value) { const el = document.getElementById(id); if (el && value) el.textContent = value; }
+function toggleScoreboard() {
+  const body = document.getElementById('scoreboard-body');
+  const chevron = document.getElementById('scoreboard-chevron');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  chevron.classList.toggle('collapsed', !isHidden);
+}
 async function loadDocuments(uid) { document.getElementById('acct-docs-list').innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>'; }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────
