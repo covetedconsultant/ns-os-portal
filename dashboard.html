@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-13-f -->
+  <!-- cache-bust: 2026-06-13-g -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -42,8 +42,6 @@
       padding: 18px 0; gap: 6px; flex-shrink: 0;
       border-right: 1px solid var(--border); z-index: 10;
     }
-    .sidebar-logo { width: 36px; height: 36px; background: var(--text); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
-    .sidebar-logo svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; }
     .nav-btn { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.15s; position: relative; }
     .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .nav-btn:hover { background: var(--surface2); color: var(--text); }
@@ -326,6 +324,34 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+
+    /* RECEIPTS PAGE */
+    .receipts-wrap { flex: 1; overflow-y: auto; padding: 32px 24px; }
+    .receipts-inner { max-width: 760px; margin: 0 auto; }
+    .receipts-title { font-size: 22px; font-weight: 700; color: var(--text); }
+    .receipts-sub { font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 18px; }
+    .rcpt-thread-select { height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface2); color: var(--text); font-family: inherit; outline: none; }
+    .rcpt-thread-select:focus { border-color: var(--gold); background: var(--surface); }
+    .rcpt-list { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .rcpt-item { border-bottom: 1px solid var(--border); }
+    .rcpt-item:last-child { border-bottom: none; }
+    .rcpt-head { padding: 14px 18px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; transition: background 0.12s; }
+    .rcpt-head:hover { background: var(--surface2); }
+    .rcpt-chev { color: var(--muted); font-size: 13px; line-height: 1.5; transition: transform 0.15s; flex-shrink: 0; }
+    .rcpt-item.open .rcpt-chev { transform: rotate(90deg); }
+    .rcpt-line { font-size: 14px; font-weight: 600; line-height: 1.45; color: var(--text); }
+    .rcpt-meta { margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .rcpt-chip { font-size: 10px; font-weight: 600; color: var(--gold); background: var(--gold-bg); border: 1px solid #e8d89a; border-radius: 10px; padding: 2px 7px; }
+    .rcpt-vt { font-size: 10px; font-weight: 600; color: #534AB7; background: #EEEDFE; border-radius: 10px; padding: 2px 7px; }
+    .rcpt-num { font-size: 12px; color: var(--muted); margin-left: 6px; }
+    .rcpt-cont { font-size: 11px; color: var(--muted); margin-left: 6px; }
+    .rcpt-body { display: none; padding: 4px 18px 18px 18px; border-top: 1px solid var(--border); background: var(--surface2); }
+    .rcpt-item.open .rcpt-body { display: block; }
+    .rcpt-arrived { margin-top: 12px; font-size: 13px; font-style: italic; color: var(--text2); }
+    .rcpt-block { margin-top: 12px; }
+    .rcpt-block-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 3px; }
+    .rcpt-block-text { font-size: 13px; line-height: 1.55; color: var(--text); }
+    .rcpt-quote { font-size: 13px; line-height: 1.5; color: var(--text2); font-style: italic; border-left: 2px solid #e8d89a; padding-left: 10px; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -349,6 +375,10 @@
   <div class="nav-btn" id="nav-prep" onclick="switchView('prep')">
     <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     <div class="tooltip">Prep Room</div>
+  </div>
+  <div class="nav-btn" id="nav-receipts" onclick="switchView('receipts')">
+    <svg viewBox="0 0 24 24"><path d="M4 2h12a2 2 0 0 1 2 2v18l-3-2-2 2-2-2-2 2-2-2-3 2V4a2 2 0 0 1 2-2z"/><line x1="8" y1="8" x2="14" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/></svg>
+    <div class="tooltip">Receipts</div>
   </div>
   <div class="nav-btn" id="nav-admin" onclick="switchView('admin')" style="display:none;">
     <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -546,6 +576,23 @@
     </div>
   </div>
 
+  <!-- Receipts -->
+  <div class="view" id="view-receipts">
+    <div class="receipts-wrap"><div class="receipts-inner">
+      <div class="receipts-title">Meeting receipts</div>
+      <div class="receipts-sub">Every session, captured. Lead line first — click any receipt for the full record.</div>
+      <div class="receipt-date-picker">
+        <label for="rcpt-from">From</label>
+        <input type="date" id="rcpt-from" />
+        <label for="rcpt-to">To</label>
+        <input type="date" id="rcpt-to" />
+        <select id="rcpt-thread" class="rcpt-thread-select" onchange="rcptRender()"><option value="">All threads</option></select>
+        <button class="receipt-apply-btn" onclick="loadReceiptsView()">Apply</button>
+      </div>
+      <div id="rcpt-list" style="margin-top:14px;"><div class="doc-empty">Select a date range and click Apply to load receipts.</div></div>
+    </div></div>
+  </div>
+
   <!-- Account -->
   <div class="view" id="view-account">
     <div class="account-wrap"><div class="account-inner">
@@ -556,17 +603,6 @@
         <div class="account-row"><div style="flex:1;"><div class="account-row-label">Preferred name</div><div class="name-edit-wrap"><input class="name-input" id="name-input" type="text" placeholder="Your name" /><button class="name-save-btn" id="name-save-btn" onclick="saveName()">Save</button></div><div class="name-save-msg" id="name-save-msg">Saved ✓</div></div></div>
         <div class="account-row"><div><div class="account-row-label">Email</div><div class="account-row-value" id="acct-email">—</div></div></div>
         <div class="account-row"><div><div class="account-row-label">Plan</div><div class="account-row-value" id="acct-plan">Chief of Staff</div></div></div>
-      </div>
-      <div class="account-section">
-        <div class="account-section-header"><div class="account-section-title">Session Receipts</div></div>
-        <div class="receipt-date-picker">
-          <label for="receipt-from-date">From</label>
-          <input type="date" id="receipt-from-date" />
-          <label for="receipt-to-date">To</label>
-          <input type="date" id="receipt-to-date" />
-          <button class="receipt-apply-btn" onclick="loadReceiptsView()">Apply</button>
-        </div>
-        <div id="receipts-list"><div class="doc-empty">Select a date range and click Apply to load receipts.</div></div>
       </div>
       <div class="account-section">
         <div class="account-section-header"><div class="account-section-title">Your Documents</div></div>
@@ -869,7 +905,6 @@ async function loadHomeContext() {
   const aop = aopRows?.[0];
   if (aop?.annual_arrival) {
     ['op-summary-text-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = aop.annual_arrival; });
-    ['op-summary-card-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('visible'); });
   }
   if (aop) {
     document.getElementById('home-state0').style.display = 'none';
@@ -895,14 +930,14 @@ function setText(id, value) { const el = document.getElementById(id); if (el && 
 async function loadDocuments(uid) { document.getElementById('acct-docs-list').innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>'; }
 
 // ── RECEIPTS ──────────────────────────────────────────────────────────
+let __rcptRows = [];
+
 function initReceiptDatePicker() {
   const today = new Date();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(today.getDate() - 30);
-
-  const toInput = document.getElementById('receipt-to-date');
-  const fromInput = document.getElementById('receipt-from-date');
-
+  const toInput = document.getElementById('rcpt-to');
+  const fromInput = document.getElementById('rcpt-from');
   if (toInput) toInput.value = today.toISOString().split('T')[0];
   if (fromInput) fromInput.value = thirtyDaysAgo.toISOString().split('T')[0];
 }
@@ -910,49 +945,107 @@ function initReceiptDatePicker() {
 async function loadReceiptsView() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
-  const fromInput = document.getElementById('receipt-from-date');
-  const toInput = document.getElementById('receipt-to-date');
-  const listEl = document.getElementById('receipts-list');
+  const fromInput = document.getElementById('rcpt-from');
+  const toInput = document.getElementById('rcpt-to');
+  const listEl = document.getElementById('rcpt-list');
+  if (!listEl) return;
 
   const fromDate = fromInput ? fromInput.value : '';
   const toDate = toInput ? toInput.value : '';
 
   listEl.innerHTML = '<div class="doc-empty">Loading receipts…</div>';
 
-  let params = `user_id=eq.${uid}&select=receipt_number,session_date,session_scope,completion_status&order=session_date.desc&limit=100`;
+  let params = `user_id=eq.${uid}&select=receipt_number,session_date,thread_tag,thread_line,supersedes,assignment_received,session_scope,what_became_clear,open_question,carried_forward,locked_language,win_description,session_decisions,trigger_context,box_built,completion_status&order=session_date.desc&limit=200`;
   if (fromDate) params += `&session_date=gte.${fromDate}`;
   if (toDate) params += `&session_date=lte.${toDate}`;
 
   try {
     const rows = await sbQuery('session_receipts', params);
-    if (!rows || rows.length === 0) {
-      listEl.innerHTML = '<div class="doc-empty">No receipts found for this date range.</div>';
-      return;
-    }
-    listEl.innerHTML = '<div class="receipt-list">' + rows.map(r => {
-      const isIncomplete = r.completion_status && r.completion_status !== 'bronze' && r.completion_status !== 'gold' && r.completion_status !== 'complete';
-      const badge = isIncomplete ? ' <span class="receipt-badge-incomplete">Incomplete</span>' : '';
-      return `<div class="receipt-row">
-        <div class="receipt-row-left">
-          <div class="receipt-row-num">${esc(r.receipt_number || '—')}${badge}</div>
-          <div class="receipt-row-scope">${esc(r.session_scope || '—')}</div>
-        </div>
-        <div class="receipt-row-date">${esc(r.session_date || '—')}</div>
-      </div>`;
-    }).join('') + '</div>';
+    __rcptRows = rows || [];
+    populateThreadFilter(__rcptRows);
+    rcptRender();
   } catch (err) {
     console.error('Receipts load failed:', err);
     listEl.innerHTML = '<div class="doc-empty">Could not load receipts.</div>';
   }
 }
 
+function populateThreadFilter(rows) {
+  const sel = document.getElementById('rcpt-thread');
+  if (!sel) return;
+  const current = sel.value;
+  const tags = [...new Set(rows.map(r => r.thread_tag).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All threads</option>' + tags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  if (tags.includes(current)) sel.value = current;
+}
+
+function rcptRender() {
+  const listEl = document.getElementById('rcpt-list');
+  if (!listEl) return;
+  const sel = document.getElementById('rcpt-thread');
+  const filter = sel ? sel.value : '';
+  const rows = filter ? __rcptRows.filter(r => r.thread_tag === filter) : __rcptRows;
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="doc-empty">No receipts found for this date range.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="rcpt-list">' + rows.map((r, i) => rcptRowHTML(r, i)).join('') + '</div>';
+}
+
+function rcptBlock(label, val) {
+  if (!val) return '';
+  return `<div class="rcpt-block"><div class="rcpt-block-label">${label}</div><div class="rcpt-block-text">${esc(val)}</div></div>`;
+}
+
+function rcptOutline(r) {
+  let locked = '';
+  let ll = r.locked_language;
+  if (typeof ll === 'string') { try { ll = JSON.parse(ll); } catch (e) { ll = ll ? [ll] : []; } }
+  if (Array.isArray(ll) && ll.length) {
+    locked = `<div class="rcpt-block"><div class="rcpt-block-label">In your words</div>` +
+      ll.map(q => `<div class="rcpt-quote">“${esc(q)}”</div>`).join('') + `</div>`;
+  }
+  return '<div class="rcpt-body">' +
+    (r.assignment_received ? `<div class="rcpt-arrived">Arrived with: ${esc(r.assignment_received)}</div>` : '') +
+    rcptBlock('What happened', r.session_scope) +
+    rcptBlock('What became clear', r.what_became_clear) +
+    rcptBlock("What's still open", r.open_question) +
+    rcptBlock('What carries forward', r.carried_forward) +
+    locked +
+    rcptBlock('Win', r.win_description) +
+    rcptBlock('Decisions', r.session_decisions) +
+    '</div>';
+}
+
+function rcptRowHTML(r, i) {
+  const chip = r.thread_tag ? `<span class="rcpt-chip">${esc(r.thread_tag)}</span>` : '';
+  const vt = (r.trigger_context === 'virtual_team' || r.box_built) ? '<span class="rcpt-vt">Virtual Team</span>' : '';
+  const cont = r.supersedes ? `<span class="rcpt-cont">↑ continues ${esc(r.supersedes)}</span>` : '';
+  const line = r.thread_line || r.session_scope || '—';
+  return `<div class="rcpt-item" id="rcpt-item-${i}">
+    <div class="rcpt-head" onclick="rcptToggle(${i})">
+      <span class="rcpt-chev">▸</span>
+      <div style="flex:1;">
+        <div class="rcpt-line">${esc(line)}</div>
+        <div class="rcpt-meta">${chip}${vt}<span class="rcpt-num">${esc(r.receipt_number || '—')} · ${esc(r.session_date || '—')}</span>${cont}</div>
+      </div>
+    </div>
+    ${rcptOutline(r)}
+  </div>`;
+}
+
+function rcptToggle(i) {
+  const item = document.getElementById('rcpt-item-' + i);
+  if (item) item.classList.toggle('open');
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────────────
 function switchView(name) {
-  ['home','setup','chat','prep','virtualteam','account','coaching','admin'].forEach(v => {
+  ['home','setup','chat','prep','receipts','virtualteam','account','coaching','admin'].forEach(v => {
     const viewEl = document.getElementById('view-' + v); if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v); if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
-  if (name === 'account') {
+  if (name === 'receipts') {
     initReceiptDatePicker();
     loadReceiptsView();
   }
