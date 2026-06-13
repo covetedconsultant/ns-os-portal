@@ -1,10 +1,12 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-12-g
+// deploy: 2026-06-13-vt1
 // Routing by room:
-//   room=setup → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
-//   room=chat  → chat-b (Daily Brief / Chief of Staff agent)
-//   room=prep  → chat-c (Prep Room agent)
+//   room=setup        → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
+//   room=chat         → chat-b (Daily Brief / Chief of Staff agent)
+//   room=prep         → chat-c (Prep Room agent)
+//   room=virtualteam  → a Virtual Team box prompt (vt-*), selected by boxId from the frontend
 // CS-1, CS-9, CS-Receipt load on-demand inside chat (room=chat) only.
+// CS-Receipt also loads on-demand inside virtualteam (close fires the unified receipt + box_built).
 // AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
 // and writes the row to annual_operating_picture before returning the response.
 // Conversation logging: user message written BEFORE Anthropic call; assistant message written after.
@@ -14,6 +16,38 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MODEL = 'claude-sonnet-4-6';
+
+// Virtual Team box prompts — the ONLY skill_ids room=virtualteam may load.
+// Frontend buttons send the entry-point boxId (the "a" prompt where a box has sub-flows).
+// The b/c sub-flows are reachable from inside their parent box, so they are allowlisted too.
+const VT_BOX_IDS = ['vt-2a','vt-2b','vt-3a','vt-3b','vt-4a','vt-4b','vt-4c','vt-5','vt-6','vt-7','vt-8','vt-8b','vt-9','vt-10'];
+
+// Map of Box N → human label, used for rooms_visited in the receipt close block.
+const VT_BOX_LABELS = {
+  'vt-2a':'Box 2 Avatar Leader','vt-2b':'Box 2 Avatar Leader','vt-3a':'Box 3 Invite Leader','vt-3b':'Box 3 Invite Leader',
+  'vt-4a':'Box 4 Converse Leader','vt-4b':'Box 4 Converse Leader','vt-4c':'Box 4 Service Package',
+  'vt-5':'Box 5 Onboard Leader','vt-6':'Box 6 Deliver Leader','vt-7':'Box 7 Recap Leader',
+  'vt-8':'Box 8 Consult Leader','vt-8b':'Box 8 CXO Service Summary','vt-9':'Box 9 Repeat Leader','vt-10':'Box 10 Delight Leader'
+};
+
+// Build the receipt close-protocol block appended to a room's system prompt when the user
+// signals close. Shared by room=chat (Daily Work) and room=virtualteam (a VT box session).
+// `opts` overrides the receipt defaults so VT closes carry trigger_context=virtual_team,
+// the right rooms_visited, and box_built.
+function buildReceiptCloseBlock(csReceiptPrompt, opts) {
+  const o = opts || {};
+  const triggerContext = o.triggerContext || 'daily_work';
+  const roomsVisited = o.roomsVisited || 'Daily Work — Chief of Staff';
+  const boxBuiltLine = o.boxBuilt ? `,"box_built":"${o.boxBuilt}"` : '';
+  return '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt +
+    '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED\n\n' +
+    'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). ' +
+    'After completing the parking lot sweep, output your session close in EXACTLY this format — no exceptions:\n\n' +
+    '[Your brief closing words — 1-3 sentences max]\n' +
+    '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"' + triggerContext + '","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"' + roomsVisited + '","carried_forward":"[any open items or none]"' + boxBuiltLine + '}%%END_RECEIPT%%\n' +
+    'Session closed. [receipt pending]\n\n' +
+    'RULES:\n- Do NOT output a bullet list of receipt fields.\n- Do NOT output any text after "Session closed. [receipt pending]".\n- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+}
 
 async function getPrompt(skillId) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/system_prompts?skill_id=eq.${skillId}&active=eq.true&select=system_prompt&limit=1`, {
@@ -302,7 +336,7 @@ exports.handler = async (event) => {
   if (!ANTHROPIC_API_KEY) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'API key not configured' }) };
 
   try {
-    const { messages, context, userName, userId, room } = JSON.parse(event.body);
+    const { messages, context, userName, userId, room, boxId } = JSON.parse(event.body);
 
     let systemPrompt;
 
@@ -322,14 +356,34 @@ exports.handler = async (event) => {
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
         if (csReceiptPrompt) {
-          systemPrompt += '\n\n---\n\n## CS-RECEIPT — SESSION CLOSE PROTOCOL\n\n' + csReceiptPrompt;
-          systemPrompt += '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED\n\n' +
-            'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). ' +
-            'After completing the parking lot sweep, output your session close in EXACTLY this format — no exceptions:\n\n' +
-            '[Your brief closing words — 1-3 sentences max]\n' +
-            '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"daily_work","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"Daily Work — Chief of Staff","carried_forward":"[any open items or none]"}%%END_RECEIPT%%\n' +
-            'Session closed. [receipt pending]\n\n' +
-            'RULES:\n- Do NOT output a bullet list of receipt fields.\n- Do NOT output any text after "Session closed. [receipt pending]".\n- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+          systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, {
+            triggerContext: 'daily_work',
+            roomsVisited: 'Daily Work — Chief of Staff'
+          });
+        }
+      }
+
+    } else if (room === 'virtualteam') {
+      // Box selection: frontend sends boxId (e.g. "vt-5"). Validate against the allowlist
+      // — NEVER load an arbitrary skill_id from client input.
+      const requestedBox = (typeof boxId === 'string' && VT_BOX_IDS.includes(boxId)) ? boxId : null;
+      if (!requestedBox) {
+        return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error: 'virtualteam room requires a valid boxId' }) };
+      }
+      const vtPrompt = await getPrompt(requestedBox);
+      if (!vtPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: requestedBox + ' prompt not found in Supabase' }) };
+      systemPrompt = vtPrompt;
+
+      // VT close fires the same unified cs-receipt — carrying virtual_team context + box_built.
+      if (csReceiptShouldLoad(messages)) {
+        const csReceiptPrompt = await getPrompt('cs-receipt');
+        if (csReceiptPrompt) {
+          const boxNum = requestedBox.replace('vt-', 'box_');
+          systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, {
+            triggerContext: 'virtual_team',
+            roomsVisited: 'Virtual Team Room — ' + (VT_BOX_LABELS[requestedBox] || requestedBox),
+            boxBuilt: boxNum
+          });
         }
       }
 
