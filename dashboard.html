@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-13-c -->
+  <!-- cache-bust: 2026-06-13-d -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -195,6 +195,14 @@
     .prefill-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 660px; }
     .prefill-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
     .prefill-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
+    .vt-box-list { width: 100%; max-width: 660px; margin: 0 auto; padding: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
+    .vt-box-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .vt-box-btn:hover { border-color: var(--gold); background: var(--gold-bg); }
+    .vt-box-main { display: flex; flex-direction: column; gap: 2px; }
+    .vt-box-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .vt-box-desc { font-size: 11px; color: var(--text2); }
+    .vt-box-arrow { font-size: 16px; color: var(--text2); flex-shrink: 0; }
+    .vt-box-btn:hover .vt-box-arrow { color: var(--gold); }
     .chat-input-wrap { width: 100%; max-width: 660px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: border 0.15s; }
     .chat-input-wrap:focus-within { border-color: var(--gold); }
     .chat-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; font-family: inherit; resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; overflow-y: hidden; }
@@ -347,6 +355,10 @@
     <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     <div class="tooltip">Prep Room</div>
   </div>
+  <div class="nav-btn" id="nav-virtualteam" onclick="switchView('virtualteam')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <div class="tooltip">Virtual Team</div>
+  </div>
   <div class="nav-btn" id="nav-admin" onclick="switchView('admin')" style="display:none;">
     <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     <div class="tooltip">Admin</div>
@@ -390,6 +402,7 @@
           <div class="nav-card" onclick="switchView('setup')"><div class="nav-card-icon">⚙️</div><div><div class="nav-card-title">Your Setup</div><div class="nav-card-desc">Build or update your operating picture.</div></div></div>
           <div class="nav-card" onclick="switchView('chat')"><div class="nav-card-icon">✦</div><div><div class="nav-card-title">Daily Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div></div>
           <div class="nav-card" onclick="switchView('prep')"><div class="nav-card-icon">📖</div><div><div class="nav-card-title">Prep Room</div><div class="nav-card-desc">Prepare for what's ahead.</div></div></div>
+          <div class="nav-card" onclick="switchView('virtualteam')"><div class="nav-card-icon">⚇</div><div><div class="nav-card-title">Virtual Team</div><div class="nav-card-desc">Build a playbook with your virtual team.</div></div></div>
         </div>
         <div class="dashboard-placeholder">
           <div class="dashboard-placeholder-label">Dashboard</div>
@@ -471,7 +484,7 @@
         <div class="prefill-btns" id="prefill-chat">
           <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to see my North Star brief.')">I'd like to see my North Star brief.</button>
           <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to talk something through.')">I'd like to talk something through.</button>
-          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to build a Virtual Team playbook.')">I'd like to build a Virtual Team playbook.</button>
+          <button class="prefill-btn" onclick="switchView('virtualteam')">I'd like to build a Virtual Team playbook.</button>
         </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -505,6 +518,39 @@
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input-prep" placeholder="What are you preparing for…" onkeydown="handleKeyPrep(event)" oninput="autoResize(this)"></textarea>
           <div class="chat-input-row"><button class="send-btn" id="send-btn-prep" onclick="sendMessage('prep')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Virtual Team Room (room=virtualteam) -->
+  <div class="view" id="view-virtualteam">
+    <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="chat-header-icon">⚇</div>
+        <div><div class="chat-header-title">Virtual Team Room</div><div class="chat-header-sub" id="vt-header-sub">Pick a box to start building</div></div>
+      </div>
+      <div class="messages" id="messages-virtualteam">
+        <div class="chat-greeting">
+          <div class="chat-greeting-line1">Your Virtual Team, <span class="name" id="greeting-name-virtualteam">—</span>.</div>
+          <div class="chat-greeting-line2">Which playbook do you need? Pick a box to begin.</div>
+        </div>
+        <div class="vt-box-list" id="vt-box-list">
+          <button class="vt-box-btn" onclick="selectBox('vt-2a','Box 2 Avatar Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 2 — Avatar Leader</span><span class="vt-box-desc">Clearer language to attract the right clients</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-3a','Box 3 Invite Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 3 — Invite Leader</span><span class="vt-box-desc">A system for starting more conversations</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-4a','Box 4 Converse Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 4 — Converse Leader</span><span class="vt-box-desc">A clear structure for a problem call</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-5','Box 5 Onboard Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 5 — Onboard Leader</span><span class="vt-box-desc">An onboarding playbook for the first 30 days</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-6','Box 6 Deliver Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 6 — Deliver Leader</span><span class="vt-box-desc">Sharpen delivery mid-engagement</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-7','Box 7 Recap Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 7 — Recap Leader</span><span class="vt-box-desc">Communicate results at the end of a phase</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-8','Box 8 Consult Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 8 — Consult Leader</span><span class="vt-box-desc">Elevate a client into a bigger engagement</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-9','Box 9 Repeat Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 9 — Repeat Leader</span><span class="vt-box-desc">A delivery framework for the long engagement</span></span><span class="vt-box-arrow">→</span></button>
+          <button class="vt-box-btn" onclick="selectBox('vt-10','Box 10 Delight Leader')"><span class="vt-box-main"><span class="vt-box-name">Box 10 — Delight Leader</span><span class="vt-box-desc">A system for the long-term relationship</span></span><span class="vt-box-arrow">→</span></button>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <textarea class="chat-input" id="chat-input-virtualteam" placeholder="Pick a box above to begin…" onkeydown="handleKeyVirtualteam(event)" oninput="autoResize(this)" disabled></textarea>
+          <div class="chat-input-row"><button class="send-btn" id="send-btn-virtualteam" onclick="sendMessage('virtualteam')"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
       </div>
     </div>
@@ -595,7 +641,8 @@ const API_ENDPOINT = '/api/chat';
 const HISTORY_KEY = 'ns_chat_history';
 let session = null;
 let userProfile = null;
-let chatHistories = { setup: [], chat: [], prep: [] };
+let chatHistories = { setup: [], chat: [], prep: [], virtualteam: [] };
+let vtSelectedBox = null;
 let autoStartFired = false;
 let countdownActive = false;
 let historyOpen = false;
@@ -799,7 +846,7 @@ async function loadProfile(email, userId) {
   const rows = await sbQuery('profiles', `id=eq.${userId}&select=id,display_name,email,tier&limit=1`);
   userProfile = (rows && rows.length > 0) ? rows[0] : { id: userId, email, display_name: email.split('@')[0], tier: 1 };
   const firstName = (userProfile?.display_name || '').split(' ')[0];
-  ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = firstName; });
+  ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep','greeting-name-virtualteam'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = firstName; });
   document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
   const nameInput = document.getElementById('name-input'); if (nameInput) nameInput.value = userProfile?.display_name || '';
   document.getElementById('acct-email').textContent = userProfile?.email || email;
@@ -817,7 +864,7 @@ async function saveName() {
     await sbPatch('profiles', `id=eq.${userProfile.id}`, { display_name: newName });
     userProfile.display_name = newName;
     const firstName = newName.split(' ')[0];
-    ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = firstName; });
+    ['user-first-name-home','user-first-name-state1','greeting-name-setup','greeting-name-chat','greeting-name-prep','greeting-name-virtualteam'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = firstName; });
     document.getElementById('user-avatar').textContent = firstName.charAt(0).toUpperCase();
     msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 2000);
   } catch (err) { console.error('Name save failed:', err); alert('Could not save name.'); }
@@ -911,7 +958,7 @@ async function loadReceiptsView() {
 
 // ── NAVIGATION ────────────────────────────────────────────────────────
 function switchView(name) {
-  ['home','setup','chat','prep','account','coaching','admin'].forEach(v => {
+  ['home','setup','chat','prep','virtualteam','account','coaching','admin'].forEach(v => {
     const viewEl = document.getElementById('view-' + v); if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v); if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
@@ -929,6 +976,35 @@ function handleCoachingClick() {
 function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('chat'); } }
 function handleKeySetup(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('setup'); } }
 function handleKeyPrep(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('prep'); } }
+function handleKeyVirtualteam(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage('virtualteam'); } }
+// VT box selection: set the active box, enable the input, and auto-start the box prompt.
+function selectBox(boxId, label) {
+  vtSelectedBox = boxId;
+  chatHistories.virtualteam = [];
+  const sub = document.getElementById('vt-header-sub'); if (sub) sub.textContent = label + ' — direct line ✓';
+  const list = document.getElementById('vt-box-list'); if (list) list.style.display = 'none';
+  const greeting = document.querySelector('#messages-virtualteam .chat-greeting'); if (greeting) greeting.style.display = 'none';
+  const input = document.getElementById('chat-input-virtualteam');
+  if (input) { input.disabled = false; input.placeholder = 'Talk to your ' + label + '…'; input.focus(); }
+  // Auto-start the box so its orientation fork fires without the user typing first.
+  chatHistories.virtualteam.push({ role: 'user', content: '__AUTOSTART__' });
+  vtAutoStart();
+}
+async function vtAutoStart() {
+  const messagesId = 'messages-virtualteam';
+  const typingEl = appendTyping(messagesId);
+  try {
+    const context = await buildContext();
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
+    typingEl.remove();
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const rawReply = data.message || 'Something went wrong.';
+    const { displayText } = await processReceiptBlock(rawReply, messagesId);
+    appendMessage(messagesId, 'assistant', displayText);
+    chatHistories.virtualteam.push({ role: 'assistant', content: displayText });
+  } catch (err) { typingEl.remove(); appendMessage(messagesId, 'assistant', 'Connection error. Please try again.'); console.error(err); }
+}
 function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; el.style.overflowY = el.scrollHeight > 120 ? 'auto' : 'hidden'; }
 
 // ── RECEIPT ───────────────────────────────────────────────────────────
@@ -977,7 +1053,9 @@ async function sendMessage(chatId) {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId }) });
+    const reqBody = { messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId };
+    if (chatId === 'virtualteam') reqBody.boxId = vtSelectedBox;
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reqBody) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
