@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-13-b -->
+  <!-- cache-bust: 2026-06-13-c -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -944,7 +944,7 @@ async function writeSessionReceipt(fields) {
   if (!userProfile?.id) throw new Error('No user profile');
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const receiptNumber = await generateReceiptNumber();
-  const payload = { user_id: userProfile.id, session_date: today, room_id: 'north-star-room', receipt_number: receiptNumber, session_scope: fields.session_scope || null, bronze_task: fields.bronze_task || null, bronze_status: fields.bronze_status || null, completion_status: fields.completion_status || 'bronze', trigger_context: fields.trigger_context || 'daily_work', outcome_type: fields.outcome_type || null, thread_tag: fields.thread_tag || null, rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff', carried_forward: fields.carried_forward || null };
+  const payload = { user_id: userProfile.id, session_date: today, room_id: 'north-star-room', receipt_number: receiptNumber, session_scope: fields.session_scope || null, bronze_task: fields.bronze_task || null, bronze_status: fields.bronze_status || null, completion_status: fields.completion_status || 'bronze', trigger_context: fields.trigger_context || 'daily_work', outcome_type: fields.outcome_type || null, thread_tag: fields.thread_tag || null, rooms_visited: fields.rooms_visited || 'Daily Work — Chief of Staff', carried_forward: fields.carried_forward || null, box_built: fields.box_built || null };
   const rows = await sbInsert('session_receipts', payload);
   return { receiptNumber, row: rows?.[0] || null };
 }
