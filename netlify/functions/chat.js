@@ -1,5 +1,7 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-13-vt1
+// deploy: 2026-06-13-thread7d
+// Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
+// of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
 //   room=setup        → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
 //   room=chat         → chat-b (Daily Brief / Chief of Staff agent)
@@ -174,6 +176,53 @@ async function writeAssistantMessageLog(userId, room, assistantMessage, sessionK
   } catch (err) {
     console.error('Assistant message log write error:', err);
   }
+}
+
+// ── DAILY BRIEF ACTIVE MEMORY: rolling N-day verbatim thread ──────────────────
+// Item 4 (2026-06-13): the Daily Brief holds the last DAILY_LOOKBACK_DAYS days of its
+// OWN verbatim conversation in active memory, so it picks up where you left off across
+// days. Anything older than the window is carried forward by the session receipts, not
+// here (transcript inside the window; receipt beyond it). This is the Daily Brief's
+// setting ONLY (room='chat') — other rooms are unchanged. session_key, receipts, the
+// admin grouping, and orphan-recovery are all untouched: this only changes which prior
+// turns the model reads, never how anything is stored.
+const DAILY_LOOKBACK_DAYS = 7;        // the rolling window — the dial Alzay sets
+const DAILY_LOOKBACK_MAX_TURNS = 60;  // safety cap so an unusually heavy week can't bloat context
+
+async function loadRecentThread(userId, room, days, maxTurns) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) return [];
+  try {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const url = `${SUPABASE_URL}/rest/v1/conversation_logs?user_id=eq.${userId}&room=eq.${room}`
+      + `&created_at=gte.${since}&select=role,content,created_at&order=created_at.desc&limit=${maxTurns}`;
+    const res = await fetch(url, { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } });
+    if (!res.ok) { console.error('loadRecentThread fetch failed:', await res.text()); return []; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    // Rows come newest-first (capped at maxTurns); reverse to chronological for the model.
+    return rows.reverse()
+      .filter(r => r && r.content && (r.role === 'user' || r.role === 'assistant'))
+      .map(r => ({ role: r.role, content: r.content }));
+  } catch (err) {
+    console.error('loadRecentThread error:', err);
+    return [];
+  }
+}
+
+// Guarantee the turns sent to Anthropic start with a user turn and strictly alternate
+// (merging any consecutive same-role turns from a missing/lagged log). Prevents a
+// "roles must alternate" API error if the logged thread has a gap.
+function normalizeTurns(turns) {
+  const out = [];
+  for (const t of turns) {
+    if (!t || !t.content || (t.role !== 'user' && t.role !== 'assistant')) continue;
+    if (out.length === 0 && t.role !== 'user') continue; // must start with a user turn
+    const last = out[out.length - 1];
+    if (last && last.role === t.role) { last.content += '\n\n' + t.content; }
+    else { out.push({ role: t.role, content: t.content }); }
+  }
+  return out;
 }
 
 function userSelectedOptionB(messages) {
@@ -426,6 +475,26 @@ exports.handler = async (event) => {
       }
     }
 
+    // ── DAILY BRIEF active memory ────────────────────────────────────────────
+    // Only the Daily Brief (room='chat') holds the rolling N-day verbatim thread.
+    // The current user message was already logged above, so the loaded thread ends
+    // with it (no duplication). Falls back to the frontend-sent messages if there is
+    // no thread yet or this isn't the Daily Brief. Older history is in the receipts.
+    let convoMessages = messages;
+    if (room === 'chat' && userId) {
+      const recentThread = await loadRecentThread(userId, 'chat', DAILY_LOOKBACK_DAYS, DAILY_LOOKBACK_MAX_TURNS);
+      if (recentThread.length > 0) {
+        const assembled = recentThread.slice();
+        // The __AUTOSTART__ trigger is never logged; re-attach it so an auto-opened
+        // brief still knows to generate the opening, now WITH the prior week in view.
+        if (lastUserMsg && lastUserMsg.content === '__AUTOSTART__') {
+          assembled.push({ role: 'user', content: '__AUTOSTART__' });
+        }
+        const normalized = normalizeTurns(assembled);
+        if (normalized.length > 0) convoMessages = normalized;
+      }
+    }
+
     const contextStr = buildContextString(context);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -437,7 +506,7 @@ exports.handler = async (event) => {
         messages: [
           { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
           { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
-          ...messages.map(m => ({ role: m.role, content: m.content }))
+          ...convoMessages.map(m => ({ role: m.role, content: m.content }))
         ]
       })
     });
