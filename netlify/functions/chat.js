@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-13-thread7d
+// deploy: 2026-06-16-protocol-id-rename
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -19,7 +19,7 @@ const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MODEL = 'claude-sonnet-4-6';
 
-// Virtual Team box prompts — the ONLY skill_ids room=virtualteam may load.
+// Virtual Team box prompts — the ONLY protocol_ids room=virtualteam may load.
 // Frontend buttons send the entry-point boxId (the "a" prompt where a box has sub-flows).
 // The b/c sub-flows are reachable from inside their parent box, so they are allowlisted too.
 const VT_BOX_IDS = ['vt-2a','vt-2b','vt-3a','vt-3b','vt-4a','vt-4b','vt-4c','vt-5','vt-6','vt-7','vt-8','vt-8b','vt-9','vt-10'];
@@ -52,7 +52,7 @@ function buildReceiptCloseBlock(csReceiptPrompt, opts) {
 }
 
 async function getPrompt(skillId) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/system_prompts?skill_id=eq.${skillId}&active=eq.true&select=system_prompt&limit=1`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/system_prompts?protocol_id=eq.${skillId}&active=eq.true&select=system_prompt&limit=1`, {
     headers: {
       'apikey': SUPABASE_SERVICE_KEY,
       'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
