@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>North Star Dashboard</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+  .dashboard {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .header .client-name {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+  .header .week-label {
+    font-size: 12px;
+    color: #aaa;
+  }
+
+  /* Annual Arrival */
+  .arrival-card {
+    background: #1a2744;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .arrival-card::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(201,162,39,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .arrival-card::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(77,182,240,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .arrival-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #c9a227;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .arrival-text {
+    font-size: 21px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.5;
+    max-width: 660px;
+    margin: 0 auto;
+    font-style: italic;
+  }
+
+  /* 2-col grid */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* Base card */
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+
+  /* Scoreboard */
+  .score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .score-pct {
+    font-size: 52px;
+    font-weight: 800;
+    color: #1a2744;
+    line-height: 1;
+  }
+  .score-sign {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a2744;
+  }
+  .score-sub {
+    font-size: 13px;
+    color: #999;
+    margin-left: 6px;
+  }
+  .bar-track {
+    background: #edf0f5;
+    border-radius: 8px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c9a227 0%, #e8c050 100%);
+    border-radius: 8px;
+  }
+  .bar-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #bbb;
+  }
+
+  /* Revenue */
+  .rev-amount {
+    font-size: 36px;
+    font-weight: 800;
+    color: #1a2744;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .rev-target {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 14px;
+  }
+  .distance-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fffaed;
+    border: 1px solid #edd060;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: #8a6800;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .next-row {
+    font-size: 12px;
+    color: #444;
+    background: #f7f8fb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border-left: 3px solid #c9a227;
+    line-height: 1.5;
+  }
+  .next-row strong { color: #1a2744; }
+
+  /* Retainer */
+  .seats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .available-badge {
+    background: #edf8f0;
+    color: #2a7a3b;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .seats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .seat {
+    border-radius: 9px;
+    padding: 12px 6px;
+    text-align: center;
+  }
+  .seat.filled {
+    background: #f0fbf3;
+    border: 1.5px solid #b8e6c2;
+  }
+  .seat.open {
+    background: #fafafa;
+    border: 1.5px dashed #ddd;
+  }
+  .seat-check {
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: #2a7a3b;
+  }
+  .seat-open-icon {
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: #ccc;
+  }
+  .seat-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.3;
+  }
+  .seat.open .seat-name { color: #bbb; }
+  .seat-sub {
+    font-size: 9px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+
+  /* Coaching Call Prep */
+  .coaching-card {
+    background: #1a2744;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 14px;
+  }
+  .coaching-card .card-label {
+    color: #c9a227;
+    margin-bottom: 18px;
+  }
+  .sar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .sar-item {
+    background: rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 16px;
+    border-top: 2.5px solid;
+  }
+  .sar-item.say  { border-color: #4db6f0; }
+  .sar-item.ask  { border-color: #c9a227; }
+  .sar-item.req  { border-color: #7ec8a0; }
+  .sar-type {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .sar-item.say .sar-type  { color: #4db6f0; }
+  .sar-item.ask .sar-type  { color: #c9a227; }
+  .sar-item.req .sar-type  { color: #7ec8a0; }
+  .sar-text {
+    font-size: 13px;
+    color: #dde0ec;
+    line-height: 1.6;
+  }
+
+  /* 3 Engines */
+  .engines-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .engine-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .engine-label {
+    font-size: 10px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: #aaa;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .engine-count {
+    font-size: 44px;
+    font-weight: 800;
+    color: #1a2744;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .engine-action {
+    font-size: 11px;
+    color: #555;
+    background: #f5f6fb;
+    border-radius: 7px;
+    padding: 8px 10px;
+    border-left: 2.5px solid #c9a227;
+    line-height: 1.5;
+  }
+
+  /* 10 Box */
+  .boxes-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .box-cell {
+    background: white;
+    border-radius: 9px;
+    padding: 12px 6px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .box-n {
+    font-size: 9px;
+    color: #ccc;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+  .box-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+  }
+  .dot-green  { background: #34c759; }
+  .dot-yellow { background: #ff9500; }
+  .dot-empty  { background: #e5e5ea; }
+  .box-lbl {
+    font-size: 9px;
+    color: #999;
+    line-height: 1.3;
+  }
+
+  /* Bottom row */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .narrative {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.8;
+  }
+  .receipts-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border: 1.5px dashed #e4e4e4;
+    border-radius: 10px;
+    min-height: 80px;
+    text-align: center;
+    padding: 18px;
+  }
+  .receipts-icon { font-size: 20px; opacity: 0.2; margin-bottom: 6px; }
+  .receipts-lbl  { font-size: 11px; color: #ccc; line-height: 1.5; }
+
+  @media (max-width: 620px) {
+    .grid-2, .sar-grid, .engines-grid, .bottom-grid { grid-template-columns: 1fr; }
+    .seats-row { grid-template-columns: repeat(3, 1fr); }
+    .boxes-grid { grid-template-columns: repeat(4, 1fr); }
+    .score-pct { font-size: 40px; }
+    .arrival-text { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="client-name">Marcus Webb</div>
+    <div class="week-label">Week of June 16, 2026 &nbsp;&middot;&nbsp; Q2 Review</div>
+  </div>
+
+  <!-- 1. Annual Arrival -->
+  <div class="arrival-card">
+    <div class="arrival-label">Annual Arrival</div>
+    <div class="arrival-text">&ldquo;By December 31, 2026, I run a 5-person firm generating $480K annually &mdash; and I take 8 weeks off.&rdquo;</div>
+  </div>
+
+  <!-- 2 + 3. Scoreboard + Revenue -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Quarterly Scoreboard &mdash; Q2</div>
+      <div class="score-row">
+        <div class="score-pct">68</div>
+        <div class="score-sign">%</div>
+        <div class="score-sub">through Q2</div>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:68%"></div>
+      </div>
+      <div class="bar-meta">
+        <span>April 1</span>
+        <span>On pace</span>
+        <span>June 30</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Revenue Picture</div>
+      <div class="rev-amount">$19,100</div>
+      <div class="rev-target">Q2 target: $28,000</div>
+      <div class="distance-chip">&#9711; &nbsp;$8,900 to target</div>
+      <div class="next-row"><strong>Next:</strong> Close the Harmon Group proposal by Friday</div>
+    </div>
+  </div>
+
+  <!-- 4. Retainer -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="seats-header">
+      <div class="card-label" style="margin-bottom:0">Retainer Practice</div>
+      <div class="available-badge">2 seats available</div>
+    </div>
+    <div class="seats-row">
+      <div class="seat filled">
+        <div class="seat-check">&#10003;</div>
+        <div class="seat-name">Jordan Pierce</div>
+        <div class="seat-sub">Active</div>
+      </div>
+      <div class="seat filled">
+        <div class="seat-check">&#10003;</div>
+        <div class="seat-name">Rachel Torres</div>
+        <div class="seat-sub">Active</div>
+      </div>
+      <div class="seat filled">
+        <div class="seat-check">&#10003;</div>
+        <div class="seat-name">David Okafor</div>
+        <div class="seat-sub">Active</div>
+      </div>
+      <div class="seat open">
+        <div class="seat-open-icon">&#9675;</div>
+        <div class="seat-name">Open</div>
+        <div class="seat-sub">Available</div>
+      </div>
+      <div class="seat open">
+        <div class="seat-open-icon">&#9675;</div>
+        <div class="seat-name">Open</div>
+        <div class="seat-sub">Available</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Coaching Call Prep -->
+  <div class="coaching-card">
+    <div class="card-label">Coaching Call Prep</div>
+    <div class="sar-grid">
+      <div class="sar-item say">
+        <div class="sar-type">Say</div>
+        <div class="sar-text">I closed the Torres referral without discounting &mdash; that&rsquo;s a pattern I want to keep.</div>
+      </div>
+      <div class="sar-item ask">
+        <div class="sar-type">Ask</div>
+        <div class="sar-text">Help me decide whether to take the Meridian project or hold the seat for a better retainer fit.</div>
+      </div>
+      <div class="sar-item req">
+        <div class="sar-type">Request</div>
+        <div class="sar-text">Give me a 3-sentence close I can use with Harmon Group this week.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 3 Engines -->
+  <div class="engines-grid">
+    <div class="engine-card">
+      <div class="engine-label">Conversations</div>
+      <div class="engine-count">6</div>
+      <div class="engine-action">Follow up with 2 stalled conversations from last week</div>
+    </div>
+    <div class="engine-card">
+      <div class="engine-label">Presentations</div>
+      <div class="engine-count">1</div>
+      <div class="engine-action">Prep the Meridian scope deck before Thursday</div>
+    </div>
+    <div class="engine-card">
+      <div class="engine-label">Referrals</div>
+      <div class="engine-count">3</div>
+      <div class="engine-action">Send the Jordan Pierce intro to his CFO contact</div>
+    </div>
+  </div>
+
+  <!-- 7. 10 Box Health -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-label">10 Box Health</div>
+    <div class="boxes-grid">
+      <div class="box-cell"><div class="box-n">1</div><div class="box-dot dot-green"></div><div class="box-lbl">Daily Brief</div></div>
+      <div class="box-cell"><div class="box-n">2</div><div class="box-dot dot-green"></div><div class="box-lbl">Weekly Plan</div></div>
+      <div class="box-cell"><div class="box-n">3</div><div class="box-dot dot-green"></div><div class="box-lbl">Content</div></div>
+      <div class="box-cell"><div class="box-n">4</div><div class="box-dot dot-green"></div><div class="box-lbl">Retainer</div></div>
+      <div class="box-cell"><div class="box-n">5</div><div class="box-dot dot-yellow"></div><div class="box-lbl">Delivery</div></div>
+      <div class="box-cell"><div class="box-n">6</div><div class="box-dot dot-empty"></div><div class="box-lbl">Admin</div></div>
+      <div class="box-cell"><div class="box-n">7</div><div class="box-dot dot-green"></div><div class="box-lbl">Pipeline</div></div>
+      <div class="box-cell"><div class="box-n">8</div><div class="box-dot dot-yellow"></div><div class="box-lbl">Team</div></div>
+      <div class="box-cell"><div class="box-n">9</div><div class="box-dot dot-green"></div><div class="box-lbl">Finance</div></div>
+      <div class="box-cell"><div class="box-n">10</div><div class="box-dot dot-empty"></div><div class="box-lbl">Development</div></div>
+    </div>
+  </div>
+
+  <!-- 8 + 9. Narrative + Receipts -->
+  <div class="bottom-grid">
+    <div class="card">
+      <div class="card-label">What Happened This Week</div>
+      <div class="narrative">Closed a new retainer client and submitted the Harmon Group proposal. Two conversations from last week&rsquo;s LinkedIn activity are still open and worth a follow-up before Friday.</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Leadership Receipts</div>
+      <div class="receipts-shell">
+        <div class="receipts-icon">&#9745;</div>
+        <div class="receipts-lbl">Weekly accountability<br>checkpoints coming soon</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
