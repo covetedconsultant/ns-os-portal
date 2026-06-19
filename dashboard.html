@@ -555,29 +555,29 @@
             <div class="hdr-sub" id="nd-hdr-sub">—</div>
           </div>
 
-          <!-- 1. North Star Arrival -->
-          <div class="arrival">
-            <div class="a-lbl">North Star Arrival</div>
-            <div class="a-txt" id="nd-arrival">—</div>
-          </div>
-
-          <!-- 2. Your Foundation -->
-          <div class="card">
-            <div class="s-lbl">Your Foundation</div>
-            <div style="margin-bottom:14px;">
-              <div class="f-lbl">One-line case study</div>
-              <div class="f-txt" id="nd-case-study"><span class="empty-state">Not yet written.</span></div>
-              <button class="copy-btn" id="nd-copybtn" style="display:none;" onclick="ndCopyCase()">&#128203; <span id="nd-copylbl">Copy</span></button>
+          <!-- 1+2. North Star Arrival + Foundation (combined) -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="arrival" style="border-radius:14px 14px 0 0;margin-bottom:0;">
+              <div class="a-lbl">North Star Arrival</div>
+              <div class="a-txt" id="nd-arrival">—</div>
             </div>
-            <div class="divider"></div>
-            <div style="margin-bottom:14px;">
-              <div class="f-lbl">Defining moment</div>
-              <div class="f-txt" id="nd-def-moment"><span class="empty-state">Not yet written.</span></div>
-            </div>
-            <div class="divider"></div>
-            <div class="pattern-box">
-              <div class="pattern-lbl">Pattern to Watch</div>
-              <div class="pattern-txt" id="nd-pattern"><span class="empty-state">Not yet set.</span></div>
+            <div style="padding:20px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
+                <div>
+                  <div class="f-lbl">One-line case study</div>
+                  <div class="f-txt" id="nd-case-study"><span class="empty-state">Not yet written.</span></div>
+                  <button class="copy-btn" id="nd-copybtn" style="display:none;" onclick="ndCopyCase()">&#128203; <span id="nd-copylbl">Copy</span></button>
+                </div>
+                <div>
+                  <div class="f-lbl">Defining moment</div>
+                  <div class="f-txt" id="nd-def-moment"><span class="empty-state">Not yet written.</span></div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="pattern-box" style="margin-bottom:0;">
+                <div class="pattern-lbl">Pattern to Watch</div>
+                <div class="pattern-txt" id="nd-pattern"><span class="empty-state">Not yet set.</span></div>
+              </div>
             </div>
           </div>
 
@@ -619,9 +619,8 @@
 
           <!-- 4. Retainer Practice -->
           <div class="card">
-            <div class="rp-hdr" onclick="ndToggleRP()">
+            <div class="rp-hdr">
               <div class="s-lbl" style="margin:0;">Retainer Practice</div>
-              <span class="rp-ct"><span id="nd-seat-count">0</span> of 5 <span class="chev" id="nd-rpchev">&#8964;</span></span>
             </div>
             <div class="seats-grid" id="nd-seats"></div>
             <div class="rp-exp" id="nd-rpexp">
@@ -634,7 +633,6 @@
                 <div id="nd-vision"><div class="exp-item"><span class="exp-dot exp-dot-g"></span><span class="empty-state">Not yet set.</span></div></div>
               </div>
             </div>
-            <div class="hint-txt">&#9996; Click header to expand</div>
           </div>
 
           <!-- 5. 3 Engines -->
@@ -1290,11 +1288,11 @@ function ndBuildDotTrack() {
 function ndBuildSeats(clients) {
   const grid = document.getElementById('nd-seats');
   if (!grid) return;
-  setText('nd-seat-count', clients.length);
   grid.innerHTML = '';
   for (let i = 0; i < 5; i++) {
     const c = clients[i];
     const seat = document.createElement('div');
+    seat.setAttribute('onclick', 'ndExpandRP()');
     if (c) {
       seat.className = 'seat seat-f';
       const tm = {gold:'t-gold',silver:'t-silv',bronze:'t-brnz'};
@@ -1325,9 +1323,12 @@ let ndRpOpen = false;
 function ndToggleRP() {
   ndRpOpen = !ndRpOpen;
   const exp = document.getElementById('nd-rpexp');
-  const chev = document.getElementById('nd-rpchev');
   if (exp) exp.classList.toggle('open', ndRpOpen);
-  if (chev) chev.classList.toggle('open', ndRpOpen);
+}
+function ndExpandRP() {
+  ndRpOpen = true;
+  const exp = document.getElementById('nd-rpexp');
+  if (exp) exp.classList.add('open');
 }
 
 function ndToggleE(i) {
