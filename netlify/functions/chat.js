@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-18-buildContextString-expand
+// deploy: 2026-06-19-say-ask-request-context
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -591,6 +591,7 @@ function buildContextString(ctx) {
       if (r.bronze_task) lines.push('  Bronze: ' + r.bronze_task + ' [' + (r.bronze_status || 'unknown') + ']');
       if (r.thread_tag) lines.push('  Thread: ' + r.thread_tag);
       if (r.progress_position) lines.push('  Position: ' + r.progress_position);
+      if (r.say_ask_request) lines.push('  Coaching Prep: ' + r.say_ask_request);
     });
   }
   if (ctx.open_parking_lot && ctx.open_parking_lot.length > 0) {
