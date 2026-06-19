@@ -352,6 +352,122 @@
     .rcpt-block-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 3px; }
     .rcpt-block-text { font-size: 13px; line-height: 1.55; color: var(--text); }
     .rcpt-quote { font-size: 13px; line-height: 1.5; color: var(--text2); font-style: italic; border-left: 2px solid #e8d89a; padding-left: 10px; margin-bottom: 5px; }
+
+  /* ── New Dashboard Modules (F12) ───────────────────────────────────── */
+  .nd-db{padding:0 0 20px;}
+  .nd-db .hdr{text-align:center;margin-bottom:20px;}
+  .nd-db .hdr-name{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px;}
+  .nd-db .hdr-sub{font-size:12px;color:var(--muted);}
+  .nd-db .card{background:white;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px;}
+  .nd-db .s-lbl{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:14px;}
+  .nd-db .divider{height:1px;background:#f0f0f0;margin:14px 0;}
+  .nd-db .hint-txt{font-size:11px;color:#bbb;margin-top:10px;display:flex;align-items:center;gap:4px;}
+  .nd-db .empty-state{font-size:12px;color:#bbb;font-style:italic;}
+  .nd-db .arrival{background:#1a2744;border-radius:14px;padding:32px;margin-bottom:12px;}
+  .nd-db .a-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:14px;}
+  .nd-db .a-txt{font-size:15px;font-weight:500;color:#fff;line-height:1.65;}
+  .nd-db .f-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;font-weight:700;margin-bottom:6px;}
+  .nd-db .f-txt{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:8px;}
+  .nd-db .copy-btn{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#888;border:1px solid #e5e5e5;border-radius:8px;padding:4px 10px;cursor:pointer;background:#f8f8f8;}
+  .nd-db .copy-btn:hover{background:#efefef;}
+  .nd-db .pattern-box{background:#fff8ed;border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:12px 14px;}
+  .nd-db .pattern-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:5px;}
+  .nd-db .pattern-txt{font-size:13px;color:#5a4200;line-height:1.55;}
+  .nd-db .wm-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+  .nd-db .wm-date{font-size:13px;color:#666;}
+  .nd-db .wm-date strong{color:var(--text);font-weight:600;}
+  .nd-db .rev-compact{text-align:right;}
+  .nd-db .rev-c-num{font-size:20px;font-weight:700;color:var(--text);line-height:1;cursor:pointer;}
+  .nd-db .rev-c-num.nd-hidden{filter:blur(5px);user-select:none;}
+  .nd-db .rev-c-sub{font-size:11px;color:#999;margin-top:2px;}
+  .nd-db .rev-hint{font-size:10px;color:#bbb;}
+  .nd-db .dot-lbl{font-size:10px;color:#bbb;margin-bottom:7px;}
+  .nd-db .dot-track{display:flex;align-items:center;gap:3px;overflow:hidden;margin-bottom:14px;flex-wrap:wrap;}
+  .nd-db .nd-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .nd-db .nd-dot.dot-done{background:#1D9E75;}
+  .nd-db .nd-dot.dot-ahead{background:#ddd;}
+  .nd-db .walker-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .nd-db .q-labels{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:6px;}
+  .nd-db .q-lbl-i{font-size:10px;color:#bbb;text-align:center;}
+  .nd-db .quarters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+  .nd-db .qb{border-radius:10px;padding:10px;}
+  .nd-db .q-done{background:#f0faf5;border:1px solid #9FE1CB;}
+  .nd-db .q-active{background:#E1F5EE;border:2px solid #1D9E75;}
+  .nd-db .q-future{background:#fafafa;border:1px dashed #ddd;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px;}
+  .nd-db .q-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0F6E56;margin-bottom:7px;}
+  .nd-db .q-txt{font-size:11px;color:#444;line-height:1.4;margin-bottom:6px;}
+  .nd-db .q-sub-focus{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#0F6E56;margin:4px 0 3px;}
+  .nd-db .q-future-mark{font-size:22px;color:#ccc;margin-bottom:5px;}
+  .nd-db .q-future-lbl{font-size:10px;color:#ccc;text-align:center;}
+  .nd-db .rp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;user-select:none;}
+  .nd-db .rp-ct{font-size:13px;color:#999;display:flex;align-items:center;gap:6px;}
+  .nd-db .chev{display:inline-block;font-size:12px;color:#bbb;transition:transform .2s;}
+  .nd-db .chev.open{transform:rotate(180deg);}
+  .nd-db .seats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  .nd-db .seat{border-radius:10px;padding:10px 6px;text-align:center;}
+  .nd-db .seat-f{background:#f0faf5;border:1px solid #9FE1CB;}
+  .nd-db .seat-o{background:#fafafa;border:1px dashed #ddd;}
+  .nd-db .seat-name{font-size:10px;font-weight:600;color:#333;margin-bottom:5px;}
+  .nd-db .seat-o .seat-name{color:#ccc;font-weight:400;}
+  .nd-db .tier-b{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;}
+  .nd-db .t-gold{background:#FAEEDA;color:#633806;}
+  .nd-db .t-silv{background:#E5E4DC;color:#444441;}
+  .nd-db .t-brnz{background:#F5EFE6;color:#7A5C3A;}
+  .nd-db .rp-exp{display:none;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0;}
+  .nd-db .rp-exp.open{display:grid;}
+  .nd-db .exp-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:#aaa;margin-bottom:8px;}
+  .nd-db .exp-lbl-g{color:#0F6E56;}
+  .nd-db .exp-item{display:flex;gap:6px;margin-bottom:6px;font-size:12px;color:#333;line-height:1.4;}
+  .nd-db .exp-dot{width:5px;height:5px;border-radius:50%;background:#bbb;margin-top:5px;flex-shrink:0;}
+  .nd-db .exp-dot-g{background:#1D9E75;}
+  .nd-db .eng-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .nd-db .eng-card{background:#f8f8f8;border-radius:10px;padding:14px;cursor:pointer;border:1px solid #eee;transition:border-color .15s;}
+  .nd-db .eng-card:hover{border-color:#ccc;}
+  .nd-db .eng-card.act{border-color:#1D9E75;background:#f0faf5;}
+  .nd-db .eng-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;font-weight:700;margin-bottom:5px;}
+  .nd-db .eng-num{font-size:32px;font-weight:800;color:var(--text);line-height:1;margin-bottom:3px;}
+  .nd-db .eng-sub{font-size:11px;color:#bbb;}
+  .nd-db .eng-detail{margin-top:12px;padding-top:12px;border-top:1px solid #9FE1CB;display:none;}
+  .nd-db .eng-dlbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#0F6E56;font-weight:700;margin-bottom:7px;}
+  .nd-db .box-legend{display:flex;gap:16px;margin-bottom:12px;}
+  .nd-db .b-leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#888;}
+  .nd-db .b-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .nd-db .box-grp{margin-bottom:10px;}
+  .nd-db .box-grp-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#ccc;font-weight:700;margin-bottom:6px;}
+  .nd-db .box-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .nd-db .b-card{border-radius:10px;padding:11px;cursor:pointer;border:1px solid;transition:border-width .1s;}
+  .nd-db .b-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .nd-db .b-num{font-size:10px;color:#bbb;}
+  .nd-db .b-sdot{width:8px;height:8px;border-radius:50%;}
+  .nd-db .b-name{font-size:12px;font-weight:600;color:var(--text);}
+  .nd-db .box-detail{margin-top:10px;padding:14px;border-radius:10px;border:1px solid #e5e5e5;background:white;display:none;}
+  .nd-db .bd-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .nd-db .bd-desc{font-size:12px;color:#666;line-height:1.5;margin-bottom:10px;}
+  .nd-db .bd-stat{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+  .nd-db .bd-slbl{font-size:12px;font-weight:600;}
+  .nd-db .bd-nlbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#aaa;font-weight:700;margin:8px 0 4px;}
+  .nd-db .bd-ntxt{font-size:12px;color:#333;line-height:1.5;}
+  .nd-db .cos-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+  .nd-db .cos-stat{background:#f8f8f8;border-radius:10px;padding:12px;}
+  .nd-db .cos-s-lbl{font-size:11px;color:#999;margin-bottom:2px;}
+  .nd-db .cos-s-val{font-size:20px;font-weight:700;color:var(--text);margin-bottom:1px;}
+  .nd-db .cos-s-det{font-size:11px;color:#bbb;}
+  .nd-db .focus-blk{background:#edf8f3;border-radius:10px;padding:14px;margin-bottom:12px;border-left:3px solid #1D9E75;}
+  .nd-db .focus-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#0F6E56;font-weight:700;margin-bottom:6px;}
+  .nd-db .focus-txt{font-size:13px;color:#085041;line-height:1.55;}
+  .nd-db .focus-txt.nd-empty{color:#bbb;font-style:italic;}
+  .nd-db .sar-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+  .nd-db .sar-c{background:#f8f8f8;border-radius:10px;padding:12px;}
+  .nd-db .sar-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:#aaa;margin-bottom:5px;}
+  .nd-db .sar-txt{font-size:12px;color:var(--text);line-height:1.45;}
+  .nd-db .wins-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .nd-db .win-tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:#E1F5EE;color:#085041;border-radius:20px;padding:4px 10px;}
+  .nd-db .btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:4px;}
+  .nd-db .btn-nav{border:none;border-radius:12px;padding:16px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.02em;transition:opacity .15s;font-family:inherit;}
+  .nd-db .btn-nav:hover{opacity:.85;}
+  .nd-db .btn-reset{background:#f0f2f5;color:#666;border:1px solid #ddd;}
+  .nd-db .btn-brief{background:#1a2744;color:white;}
+  .nd-db .btn-prep{background:#1D9E75;color:white;}
   </style>
 </head>
 <body>
@@ -431,29 +547,187 @@
         </div>
       </div>
       <div id="home-state1" style="display:none;">
-        <div class="state1-greeting">Your North Star is live, <span class="name" id="user-first-name-state1">—</span></div>
-        <div class="s1-section-label">Your destination</div>
-        <div class="destination-card"><div class="destination-label">Annual arrival</div><div class="destination-value" id="s1-arrival">—</div></div>
-        <div class="s1-section-label" style="margin-top:20px;">Your operating picture</div>
-        <div class="s1-grid-2" style="margin-bottom:12px;">
-          <div class="s1-card"><div class="s1-card-label">Mission</div><div class="s1-card-value" id="s1-mission">—</div></div>
-          <div class="s1-card"><div class="s1-card-label">Revenue target</div><div class="s1-card-value large" id="s1-revenue">—</div><div class="s1-revenue-badge">floor · this year</div></div>
-        </div>
-        <div class="s1-section-label">What you've built</div>
-        <div class="s1-card" style="margin-bottom:12px;"><div class="s1-card-label">Best client result</div><div class="s1-card-value" id="s1-best-result">—</div></div>
-        <div class="s1-grid-2" style="margin-bottom:24px;">
-          <div class="s1-card"><div class="s1-card-label">Pattern to watch</div><div class="s1-card-value" id="s1-pattern">—</div></div>
-          <div class="s1-card"><div class="s1-card-label">First focus this week</div><div class="s1-card-value" id="s1-first-focus">—</div></div>
-        </div>
-        <div class="s1-section-label">Scoreboard</div>
-        <div class="scoreboard-dormant">
-          <div class="scoreboard-slots"><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div><div class="scoreboard-slot"></div></div>
-          <div class="scoreboard-text"><div class="scoreboard-title">Client scoreboard</div><div class="scoreboard-sub">Your Chief of Staff tracks this from your sessions — it will fill in as you work together.</div></div>
-        </div>
-        <div class="s1-nav-buttons">
-          <div class="s1-nav-btn" onclick="switchView('setup')">Restart setup</div>
-          <div class="s1-nav-btn" onclick="switchView('chat')">Daily Brief</div>
-          <div class="s1-nav-btn" onclick="switchView('prep')">Prep Room</div>
+        <div class="nd-db">
+
+          <!-- Header -->
+          <div class="hdr">
+            <div class="hdr-name" id="nd-hdr-name">—</div>
+            <div class="hdr-sub" id="nd-hdr-sub">—</div>
+          </div>
+
+          <!-- 1. North Star Arrival -->
+          <div class="arrival">
+            <div class="a-lbl">North Star Arrival</div>
+            <div class="a-txt" id="nd-arrival">—</div>
+          </div>
+
+          <!-- 2. Your Foundation -->
+          <div class="card">
+            <div class="s-lbl">Your Foundation</div>
+            <div style="margin-bottom:14px;">
+              <div class="f-lbl">One-line case study</div>
+              <div class="f-txt" id="nd-case-study"><span class="empty-state">Not yet written.</span></div>
+              <button class="copy-btn" id="nd-copybtn" style="display:none;" onclick="ndCopyCase()">&#128203; <span id="nd-copylbl">Copy</span></button>
+            </div>
+            <div class="divider"></div>
+            <div style="margin-bottom:14px;">
+              <div class="f-lbl">Defining moment</div>
+              <div class="f-txt" id="nd-def-moment"><span class="empty-state">Not yet written.</span></div>
+            </div>
+            <div class="divider"></div>
+            <div class="pattern-box">
+              <div class="pattern-lbl">Pattern to Watch</div>
+              <div class="pattern-txt" id="nd-pattern"><span class="empty-state">Not yet set.</span></div>
+            </div>
+          </div>
+
+          <!-- 3. Where You Are -->
+          <div class="card">
+            <div class="s-lbl" style="margin-bottom:10px;">Where You Are</div>
+            <div class="wm-row">
+              <div class="wm-date" id="nd-quarter-date">—</div>
+              <div class="rev-compact">
+                <div class="rev-c-num nd-hidden" id="nd-revnum" onclick="ndRevealRev()">—</div>
+                <div class="rev-c-sub">revenue floor &middot; bronze</div>
+                <div class="rev-hint" id="nd-revhint">click to reveal</div>
+              </div>
+            </div>
+            <div class="dot-lbl">Your year — week by week</div>
+            <div class="dot-track" id="nd-dottrack"></div>
+            <div class="q-labels">
+              <div class="q-lbl-i">Q1 &middot; Jan&ndash;Mar</div>
+              <div class="q-lbl-i">Q2 &middot; Apr&ndash;Jun</div>
+              <div class="q-lbl-i">Q3 &middot; Jul&ndash;Sep</div>
+              <div class="q-lbl-i">Q4 &middot; Oct&ndash;Dec</div>
+            </div>
+            <div class="quarters">
+              <div class="qb q-done">
+                <div class="q-title">Q1 — done</div>
+                <div class="q-txt">NS OS foundation built. Supabase migration complete. Custom portal launched.</div>
+              </div>
+              <div class="qb q-active">
+                <div class="q-title">Q2 — active</div>
+                <div class="q-sub-focus">Professional Focus</div>
+                <div class="q-txt">Box 3 — Content / Avatar Market Testing</div>
+                <div class="q-sub-focus" style="margin-top:8px;">Personal Focus</div>
+                <div class="q-txt">Section 5B — Congruent Beliefs and Behaviors</div>
+              </div>
+              <div class="qb q-future"><div class="q-future-mark">?</div><div class="q-future-lbl">Q3 not planned yet</div></div>
+              <div class="qb q-future"><div class="q-future-mark">?</div><div class="q-future-lbl">Q4 not planned yet</div></div>
+            </div>
+          </div>
+
+          <!-- 4. Retainer Practice -->
+          <div class="card">
+            <div class="rp-hdr" onclick="ndToggleRP()">
+              <div class="s-lbl" style="margin:0;">Retainer Practice</div>
+              <span class="rp-ct"><span id="nd-seat-count">0</span> of 5 <span class="chev" id="nd-rpchev">&#8964;</span></span>
+            </div>
+            <div class="seats-grid" id="nd-seats"></div>
+            <div class="rp-exp" id="nd-rpexp">
+              <div>
+                <div class="exp-lbl">What I'm working on to get full</div>
+                <div id="nd-working-on"><div class="exp-item"><span class="exp-dot"></span><span class="empty-state">Not yet set.</span></div></div>
+              </div>
+              <div>
+                <div class="exp-lbl exp-lbl-g">Once full, what becomes possible</div>
+                <div id="nd-vision"><div class="exp-item"><span class="exp-dot exp-dot-g"></span><span class="empty-state">Not yet set.</span></div></div>
+              </div>
+            </div>
+            <div class="hint-txt">&#9996; Click header to expand</div>
+          </div>
+
+          <!-- 5. 3 Engines -->
+          <div class="card">
+            <div class="s-lbl">3 Engines</div>
+            <div class="eng-grid">
+              <div class="eng-card" id="nd-e0" onclick="ndToggleE(0)">
+                <div class="eng-lbl">Conversations</div>
+                <div class="eng-num">—</div>
+                <div class="eng-sub">this week</div>
+                <div class="eng-detail" id="nd-ed0">
+                  <div class="eng-dlbl">What you're learning</div>
+                  <div class="exp-item"><span class="exp-dot"></span>Track conversations in your weekly planning sessions.</div>
+                </div>
+              </div>
+              <div class="eng-card" id="nd-e1" onclick="ndToggleE(1)">
+                <div class="eng-lbl">Clients</div>
+                <div class="eng-num">—</div>
+                <div class="eng-sub">this month</div>
+                <div class="eng-detail" id="nd-ed1">
+                  <div class="eng-dlbl">What you're learning</div>
+                  <div class="exp-item"><span class="exp-dot"></span>Track client closes in your session receipts.</div>
+                </div>
+              </div>
+              <div class="eng-card" id="nd-e2" onclick="ndToggleE(2)">
+                <div class="eng-lbl">Retainers</div>
+                <div class="eng-num" id="nd-retainer-count">0</div>
+                <div class="eng-sub">active</div>
+                <div class="eng-detail" id="nd-ed2">
+                  <div class="eng-dlbl">What you're learning</div>
+                  <div class="exp-item"><span class="exp-dot"></span>First retainer client will unlock this engine.</div>
+                </div>
+              </div>
+            </div>
+            <div class="hint-txt">&#9996; Click any engine to see learnings</div>
+          </div>
+
+          <!-- 6. 10 Box Health -->
+          <div class="card">
+            <div class="s-lbl">10 Box Health</div>
+            <div class="box-legend">
+              <div class="b-leg"><div class="b-dot" style="background:#E24B4A;"></div>No playbook</div>
+              <div class="b-leg"><div class="b-dot" style="background:#EF9F27;"></div>Playbook exists</div>
+              <div class="b-leg"><div class="b-dot" style="background:#1D9E75;"></div>Playbook + measurable</div>
+            </div>
+            <div id="nd-boxgrid"></div>
+            <div class="box-detail" id="nd-boxdetail"></div>
+            <div class="hint-txt">&#9996; Click any box to see status and next step</div>
+          </div>
+
+          <!-- 7. Chief of Staff -->
+          <div class="card">
+            <div class="s-lbl">Chief of Staff</div>
+            <div class="cos-stats">
+              <div class="cos-stat">
+                <div class="cos-s-lbl">Sessions this quarter</div>
+                <div class="cos-s-val" id="nd-session-ct">—</div>
+                <div class="cos-s-det" id="nd-last-session">—</div>
+              </div>
+              <div class="cos-stat">
+                <div class="cos-s-lbl">Streak</div>
+                <div class="cos-s-val">—</div>
+                <div class="cos-s-det">tracked by weekly planning</div>
+              </div>
+              <div class="cos-stat">
+                <div class="cos-s-lbl">Wins logged</div>
+                <div class="cos-s-val">0</div>
+                <div class="cos-s-det">this quarter</div>
+              </div>
+            </div>
+            <div class="focus-blk">
+              <div class="focus-lbl">First focus this week</div>
+              <div class="focus-txt nd-empty" id="nd-first-focus">Not yet set — your Chief of Staff will write this during your next weekly planning session.</div>
+            </div>
+            <div class="s-lbl" style="margin-bottom:8px;">Coaching call prep</div>
+            <div class="sar-row">
+              <div class="sar-c"><div class="sar-lbl">Say</div><div class="sar-txt empty-state">Set during weekly planning</div></div>
+              <div class="sar-c"><div class="sar-lbl">Ask</div><div class="sar-txt empty-state">Set during weekly planning</div></div>
+              <div class="sar-c"><div class="sar-lbl">Request</div><div class="sar-txt empty-state">Set during weekly planning</div></div>
+            </div>
+            <div class="s-lbl" style="margin-bottom:8px;">Wins this quarter</div>
+            <div class="wins-row">
+              <span class="empty-state">No wins logged yet — your Chief of Staff tracks these from sessions.</span>
+            </div>
+          </div>
+
+          <!-- 8. Bottom buttons -->
+          <div class="btn-row">
+            <button class="btn-nav btn-reset" onclick="switchView('setup')">Restart Setup</button>
+            <button class="btn-nav btn-brief" onclick="switchView('chat')">Daily Brief</button>
+            <button class="btn-nav btn-prep" onclick="switchView('prep')">Prep Room</button>
+          </div>
+
         </div>
       </div>
     </div></div>
@@ -901,32 +1175,234 @@ async function saveName() {
 async function loadHomeContext() {
   if (!userProfile?.id) return;
   const uid = userProfile.id;
-  const aopRows = await sbQuery('annual_operating_picture', `user_id=eq.${uid}&select=annual_arrival,mission_statement,revenue_floor_bronze,gold_standard_business_picture,limiting_belief_raw,first_focus&order=updated_at.desc&limit=1`);
+
+  const aopRows = await sbQuery('annual_operating_picture',
+    `user_id=eq.${uid}&select=annual_arrival,mission_statement,revenue_floor_bronze,limiting_belief_raw,first_focus,defining_moment_summary,one_line_case_study,retainer_working_on,retainer_vision&order=updated_at.desc&limit=1`);
   const aop = aopRows?.[0];
+
   if (aop?.annual_arrival) {
-    ['op-summary-text-setup'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = aop.annual_arrival; });
+    const el = document.getElementById('op-summary-text-setup');
+    if (el) el.textContent = aop.annual_arrival;
   }
-  if (aop) {
-    document.getElementById('home-state0').style.display = 'none';
-    document.getElementById('home-state1').style.display = 'block';
-    setText('s1-arrival', aop.annual_arrival);
-    setText('s1-mission', aop.mission_statement);
-    if (aop.revenue_floor_bronze) {
-      const rev = parseFloat(aop.revenue_floor_bronze);
-      document.getElementById('s1-revenue').textContent = isNaN(rev) ? aop.revenue_floor_bronze : '$' + rev.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    }
-    if (aop.gold_standard_business_picture) {
-      let bestResult = aop.gold_standard_business_picture;
-      try { const parsed = typeof bestResult === 'string' ? JSON.parse(bestResult) : bestResult; bestResult = parsed.case_study || parsed.proof || JSON.stringify(parsed); } catch (e) {}
-      setText('s1-best-result', bestResult);
-    }
-    setText('s1-pattern', aop.limiting_belief_raw);
-    setText('s1-first-focus', aop.first_focus);
+
+  if (!aop) { loadDocuments(uid); return; }
+
+  document.getElementById('home-state0').style.display = 'none';
+  document.getElementById('home-state1').style.display = 'block';
+
+  // Header
+  const now = new Date();
+  const qNum = Math.ceil((now.getMonth() + 1) / 3);
+  const firstName = (userProfile.display_name || '').split(' ')[0] || '—';
+  setText('nd-hdr-name', firstName);
+  const hdrs = document.getElementById('nd-hdr-sub');
+  if (hdrs) hdrs.textContent = `Q${qNum} · ${now.toLocaleString('en-US',{month:'long'})} ${now.getFullYear()}`;
+
+  // 1. North Star Arrival
+  setText('nd-arrival', aop.annual_arrival);
+
+  // 2. Foundation
+  if (aop.one_line_case_study) {
+    const el = document.getElementById('nd-case-study');
+    if (el) el.textContent = aop.one_line_case_study;
+    const btn = document.getElementById('nd-copybtn');
+    if (btn) btn.style.display = 'inline-flex';
   }
+  if (aop.defining_moment_summary) {
+    const el = document.getElementById('nd-def-moment');
+    if (el) el.textContent = aop.defining_moment_summary;
+  }
+  if (aop.limiting_belief_raw) {
+    const el = document.getElementById('nd-pattern');
+    if (el) el.textContent = aop.limiting_belief_raw;
+  }
+
+  // 3. Where You Are
+  if (aop.revenue_floor_bronze) {
+    const rev = parseFloat(aop.revenue_floor_bronze);
+    const el = document.getElementById('nd-revnum');
+    if (el) el.textContent = isNaN(rev) ? aop.revenue_floor_bronze : '$' + rev.toLocaleString('en-US',{maximumFractionDigits:0});
+  }
+  const qd = document.getElementById('nd-quarter-date');
+  if (qd) qd.innerHTML = `<strong>Q${qNum} active</strong> &middot; ${now.toLocaleString('en-US',{month:'long'})} ${now.getDate()}, ${now.getFullYear()}`;
+  ndBuildDotTrack();
+
+  // 4. Retainer Practice
+  const clientRows = await sbQuery('retainer_clients', `user_id=eq.${uid}&select=display_name,tier&order=created_at.asc&limit=5`);
+  ndBuildSeats(clientRows || []);
+  ndBuildRetainerBullets(aop.retainer_working_on, aop.retainer_vision);
+
+  // 5. 3 Engines — retainer count (set again after seats built)
+  const rc = document.getElementById('nd-retainer-count');
+  if (rc) rc.textContent = (clientRows || []).length;
+
+  // 6. 10 Box Health
+  const boxRows = await sbQuery('playbook_sessions', `user_id=eq.${uid}&select=box_number,status&order=updated_at.desc&limit=50`);
+  ndBuildBoxHealth(boxRows || []);
+
+  // 7. Chief of Staff
+  const qStart = new Date(now.getFullYear(), (qNum-1)*3, 1).toISOString().split('T')[0];
+  const sessRows = await sbQuery('session_receipts', `user_id=eq.${uid}&session_date=gte.${qStart}&select=session_date&order=session_date.desc&limit=50`);
+  if (sessRows?.length) {
+    setText('nd-session-ct', sessRows.length);
+    const last = new Date(sessRows[0].session_date);
+    setText('nd-last-session', 'last session ' + last.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  }
+  if (aop.first_focus) {
+    const el = document.getElementById('nd-first-focus');
+    if (el) { el.textContent = aop.first_focus; el.classList.remove('nd-empty'); }
+  }
+
   loadDocuments(uid);
 }
 
-function setText(id, value) { const el = document.getElementById(id); if (el && value) el.textContent = value; }
+// ── ND HELPER FUNCTIONS ───────────────────────────────────────────────
+let ndRevRevealed = false;
+function ndRevealRev() {
+  ndRevRevealed = !ndRevRevealed;
+  const el = document.getElementById('nd-revnum');
+  if (el) el.classList.toggle('nd-hidden', !ndRevRevealed);
+  const hint = document.getElementById('nd-revhint');
+  if (hint) hint.textContent = ndRevRevealed ? 'click to hide' : 'click to reveal';
+}
+
+function ndBuildDotTrack() {
+  const track = document.getElementById('nd-dottrack');
+  if (!track) return;
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil((now - startOfYear) / (7 * 24 * 3600 * 1000));
+  track.innerHTML = '';
+  for (let i = 1; i <= 50; i++) {
+    if (i === week) {
+      const w = document.createElement('div');
+      w.className = 'walker-wrap';
+      w.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:#1D9E75;border:2px solid white;box-shadow:0 0 0 2px #1D9E75;"></div>';
+      track.appendChild(w);
+    } else {
+      const d = document.createElement('div');
+      d.className = 'nd-dot ' + (i < week ? 'dot-done' : 'dot-ahead');
+      track.appendChild(d);
+    }
+  }
+}
+
+function ndBuildSeats(clients) {
+  const grid = document.getElementById('nd-seats');
+  if (!grid) return;
+  setText('nd-seat-count', clients.length);
+  grid.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const c = clients[i];
+    const seat = document.createElement('div');
+    if (c) {
+      seat.className = 'seat seat-f';
+      const tm = {gold:'t-gold',silver:'t-silv',bronze:'t-brnz'};
+      const tc = tm[(c.tier||'').toLowerCase()] || 't-brnz';
+      seat.innerHTML = `<div class="seat-name">${c.display_name||'Client'}</div><span class="tier-b ${tc}">${c.tier||'Bronze'}</span>`;
+    } else {
+      seat.className = 'seat seat-o';
+      seat.innerHTML = '<div class="seat-name">Open</div><span style="font-size:10px;color:#ccc;">Available</span>';
+    }
+    grid.appendChild(seat);
+  }
+}
+
+function ndBuildRetainerBullets(working, vision) {
+  function build(elId, arr, dotClass) {
+    const el = document.getElementById(elId);
+    if (!el || !arr) return;
+    let items;
+    try { items = typeof arr === 'string' ? JSON.parse(arr) : arr; } catch(e) { return; }
+    if (!Array.isArray(items) || !items.length) return;
+    el.innerHTML = items.map(t => `<div class="exp-item"><span class="exp-dot ${dotClass}"></span><span>${t}</span></div>`).join('');
+  }
+  build('nd-working-on', working, '');
+  build('nd-vision', vision, 'exp-dot-g');
+}
+
+let ndRpOpen = false;
+function ndToggleRP() {
+  ndRpOpen = !ndRpOpen;
+  const exp = document.getElementById('nd-rpexp');
+  const chev = document.getElementById('nd-rpchev');
+  if (exp) exp.classList.toggle('open', ndRpOpen);
+  if (chev) chev.classList.toggle('open', ndRpOpen);
+}
+
+function ndToggleE(i) {
+  const card = document.getElementById('nd-e' + i);
+  const detail = document.getElementById('nd-ed' + i);
+  if (!card) return;
+  const open = card.classList.toggle('act');
+  if (detail) detail.style.display = open ? 'block' : 'none';
+}
+
+function ndCopyCase() {
+  const el = document.getElementById('nd-case-study');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).catch(()=>{});
+  const lbl = document.getElementById('nd-copylbl');
+  if (lbl) { lbl.textContent = 'Copied!'; setTimeout(()=>lbl.textContent='Copy', 2000); }
+}
+
+const ND_BOXES = [
+  { grp:'Client Acquisition', items:[
+    {num:'1',name:'Avatar',desc:'Reverse-engineer your ideal client from your best case studies and existing client results.'},
+    {num:'2',name:'Invite',desc:'Develop a systematic lead generation approach using your one-page case study.'},
+    {num:'3',name:'Converse',desc:'Conduct strategic sales conversations using the Problem Call Framework.'},
+  ]},
+  { grp:'Client Service', items:[
+    {num:'4',name:'Onboard',desc:'Create immediate momentum and align all stakeholders before work begins.'},
+    {num:'5',name:'Deliver',desc:'Transform your expertise into a productized, milestone-based service.'},
+    {num:'6',name:'Recap',desc:'Document transformation, celebrate progress, and transition to continued partnership.'},
+  ]},
+  { grp:'Client Retention', items:[
+    {num:'7',name:'Consult',desc:'Facilitate the elevation decision between service repetition and strategic partnership.'},
+    {num:'8',name:'Repeat',desc:'Execute the annual retainer framework through quarterly, monthly, and weekly touchpoints.'},
+    {num:'9',name:'Delight',desc:'Use the Stay Alert System to create unexpected moments of delight that deepen retainer relationships.'},
+  ]},
+];
+const ND_SC = {
+  red:   {bg:'#FCEBEB',border:'#F7C1C1',dot:'#E24B4A',lbl:'No playbook',         lc:'#A32D2D',next:'Build a basic playbook for this box — even a simple checklist counts.'},
+  yellow:{bg:'#FAEEDA',border:'#FAC775',dot:'#EF9F27',lbl:'Playbook exists',       lc:'#854F0B',next:'Define a measurable standard and track it consistently to reach Green.'},
+  green: {bg:'#E1F5EE',border:'#9FE1CB',dot:'#1D9E75',lbl:'Playbook + measurable', lc:'#0F6E56',next:'You have a playbook and can measure results. Ready to delegate.'},
+};
+let ndBoxStatusMap = {};
+let ndActiveBox = null;
+function ndBuildBoxHealth(rows) {
+  ndBoxStatusMap = {};
+  rows.forEach(r => { if (r.box_number) ndBoxStatusMap[String(r.box_number)] = r.status || 'red'; });
+  const grid = document.getElementById('nd-boxgrid');
+  if (!grid) return;
+  grid.innerHTML = ND_BOXES.map((grp, gi) =>
+    `<div class="box-grp"><div class="box-grp-lbl">${grp.grp}</div><div class="box-row">` +
+    grp.items.map((b, bi) => {
+      const s = ND_SC[ndBoxStatusMap[b.num] || 'red'];
+      return `<div class="b-card" id="nd-bc${gi}_${bi}" style="background:${s.bg};border-color:${s.border};" onclick="ndToggleBox(${gi},${bi})"><div class="b-card-hdr"><span class="b-num">${b.num}</span><div class="b-sdot" style="background:${s.dot};"></div></div><div class="b-name">${b.name}</div></div>`;
+    }).join('') + `</div></div>`
+  ).join('');
+}
+function ndToggleBox(gi, bi) {
+  const key = gi + '_' + bi;
+  const dp = document.getElementById('nd-boxdetail');
+  if (!dp) return;
+  if (ndActiveBox === key) {
+    ndActiveBox = null; dp.style.display = 'none';
+    document.querySelectorAll('#nd-boxgrid .b-card').forEach(c => c.style.borderWidth = '1px');
+    return;
+  }
+  ndActiveBox = key;
+  const b = ND_BOXES[gi].items[bi];
+  const s = ND_SC[ndBoxStatusMap[b.num] || 'red'];
+  document.querySelectorAll('#nd-boxgrid .b-card').forEach(c => c.style.borderWidth = '1px');
+  const bc = document.getElementById('nd-bc' + key);
+  if (bc) bc.style.borderWidth = '2px';
+  dp.innerHTML = `<div class="bd-name">${b.num} — ${b.name}</div><div class="bd-desc">${b.desc}</div><div class="bd-stat"><div class="b-sdot" style="background:${s.dot};width:10px;height:10px;"></div><span class="bd-slbl" style="color:${s.lc};">${s.lbl}</span></div><div class="bd-nlbl">Next step</div><div class="bd-ntxt">${s.next}</div>`;
+  dp.style.display = 'block';
+}
+
+function setText(id, value) { const el = document.getElementById(id); if (el && value !== undefined && value !== null) el.textContent = value; }
 async function loadDocuments(uid) { document.getElementById('acct-docs-list').innerHTML = '<div class="doc-empty">Documents you upload during setup will appear here.<br><span style="font-size:11px;color:var(--muted);margin-top:6px;display:block;">Coming soon — file storage is being connected.</span></div>'; }
 
 // ── RECEIPTS ──────────────────────────────────────────────────────────
