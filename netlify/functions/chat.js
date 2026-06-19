@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-16-protocol-id-rename
+// deploy: 2026-06-18-buildContextString-expand
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -561,6 +561,13 @@ function buildContextString(ctx) {
     if (a.session_translation) lines.push('Session Translation: ' + a.session_translation);
     if (a.limiting_belief_raw) lines.push('Limiting Belief: ' + a.limiting_belief_raw);
     if (a.congruent_behavior_raw) lines.push('Congruent Behavior: ' + a.congruent_behavior_raw);
+    if (a.defining_moment_summary) lines.push('Defining Moment: ' + a.defining_moment_summary);
+    if (a.one_line_case_study) lines.push('One-Line Case Study: ' + a.one_line_case_study);
+    if (a.one_line_case_study_expanded) lines.push('Case Study Expanded: ' + a.one_line_case_study_expanded);
+    if (a.revenue_floor_bronze) lines.push('Revenue Floor (Bronze): ' + a.revenue_floor_bronze);
+    if (a.revenue_floor_gold) lines.push('Revenue Floor (Gold): ' + a.revenue_floor_gold);
+    if (a.five_freedoms_stated) lines.push('Five Freedoms: ' + JSON.stringify(a.five_freedoms_stated));
+    if (a.first_focus) lines.push('First Focus This Week: ' + a.first_focus);
   }
   if (ctx.quarterly_dashboard) {
     const q = ctx.quarterly_dashboard;
