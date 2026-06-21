@@ -423,6 +423,11 @@ exports.handler = async (event) => {
       if (!vtPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: requestedBox + ' prompt not found in Supabase' }) };
       systemPrompt = vtPrompt;
 
+      // Every VT box renders its playbook HTML to the shared master design standard.
+      // Load it once from Supabase and append so the box always has it in context.
+      const designStandard = await getPrompt('REF-pdf-html-standard');
+      if (designStandard) systemPrompt += '\n\n---\n\n## NS-OS-PDF-HTML-STANDARD — MASTER DESIGN STANDARD (render all playbook HTML to this)\n\n' + designStandard;
+
       // VT close fires the same unified cs-receipt — carrying virtual_team context + box_built.
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
