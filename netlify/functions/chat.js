@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-29-prep-direct-routing
+// deploy: 2026-06-29-full-prep-chain-injection
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -466,12 +466,45 @@ exports.handler = async (event) => {
       }
 
     } else if (room === 'prep') {
-      // Direct routing — detect opening message, load correct protocol.
-      // No mid-conversation Supabase load. Prevents portal hang.
+      // Full chain injection — all REF/LOG documents fetched upfront by chat.js.
+      // The AI never makes a mid-conversation Supabase load call. Prevents portal hang.
       const prepRoute = detectPrepRoute(messages);
-      const prepPrompt = await getPrompt(prepRoute);
-      if (!prepPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: prepRoute + ' prompt not found in Supabase' }) };
-      systemPrompt = prepPrompt;
+      if (prepRoute === 'tr-2') {
+        // Weekly check-in — fetch base protocol + REF
+        const [tr2Prompt, refWeekly] = await Promise.all([
+          getPrompt('tr-2'),
+          getPrompt('REF-weekly-planning-conversation-standard')
+        ]);
+        if (!tr2Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'tr-2 prompt not found in Supabase' }) };
+        systemPrompt = tr2Prompt;
+        if (refWeekly) systemPrompt += '\n\n---\n\n## REF — WEEKLY PLANNING CONVERSATION STANDARD\n\n[SYSTEM: This document has been loaded into this session by chat.js. The AI does not need to fetch it.]\n\n' + refWeekly;
+      } else if (prepRoute === 'menu-quarterly-review-prep') {
+        // Quarterly review — fetch full chain upfront
+        const [menuPrompt, cs13Prompt, cs14Prompt, refConvStd, refLookBack, refLookFwd, refCoachesPov, logQR] = await Promise.all([
+          getPrompt('menu-quarterly-review-prep'),
+          getPrompt('cs-13'),
+          getPrompt('cs-14'),
+          getPrompt('REF-quarterly-review-conversation-standard'),
+          getPrompt('REF-quarterly-review-look-backward'),
+          getPrompt('REF-quarterly-review-look-forward'),
+          getPrompt('REF-quarterly-review-coaches-pov'),
+          getPrompt('LOG-quarterly-review')
+        ]);
+        if (!menuPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'menu-quarterly-review-prep not found in Supabase' }) };
+        systemPrompt = menuPrompt;
+        if (cs13Prompt) systemPrompt += '\n\n---\n\n## CS-13 — LOOK BACKWARD\n\n[SYSTEM: Loaded by chat.js. No mid-conversation fetch needed.]\n\n' + cs13Prompt;
+        if (cs14Prompt) systemPrompt += '\n\n---\n\n## CS-14 — LOOK FORWARD\n\n[SYSTEM: Loaded by chat.js. No mid-conversation fetch needed.]\n\n' + cs14Prompt;
+        if (refConvStd) systemPrompt += '\n\n---\n\n## REF — QUARTERLY REVIEW CONVERSATION STANDARD\n\n' + refConvStd;
+        if (refLookBack) systemPrompt += '\n\n---\n\n## REF — LOOK BACKWARD\n\n' + refLookBack;
+        if (refLookFwd) systemPrompt += '\n\n---\n\n## REF — LOOK FORWARD\n\n' + refLookFwd;
+        if (refCoachesPov) systemPrompt += '\n\n---\n\n## REF — COACHES POV\n\n' + refCoachesPov;
+        if (logQR) systemPrompt += '\n\n---\n\n## LOG — QUARTERLY REVIEW\n\n' + logQR;
+      } else {
+        // Ambiguous — show A/B menu via chat-c
+        const chatCPrompt = await getPrompt('chat-c');
+        if (!chatCPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'chat-c prompt not found in Supabase' }) };
+        systemPrompt = chatCPrompt;
+      }
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
         if (csReceiptPrompt) {
