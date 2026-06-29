@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-19-say-ask-request-context
+// deploy: 2026-06-29-prep-direct-routing
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -31,6 +31,30 @@ const VT_BOX_LABELS = {
   'vt-5':'Box 5 Onboard Leader','vt-6':'Box 6 Deliver Leader','vt-7':'Box 7 Recap Leader',
   'vt-8':'Box 8 Consult Leader','vt-8b':'Box 8 CXO Service Summary','vt-9':'Box 9 Repeat Leader','vt-10':'Box 10 Delight Leader'
 };
+
+// ── PREP ROOM ROUTING ────────────────────────────────────────────────────────
+// Detects the opening message and loads the correct protocol directly.
+// Prevents the mid-conversation load hang where chat-c instructs the AI to
+// 'load and execute' a downstream protocol — which fails in the portal because
+// the AI has no Supabase tool access inside chat.js.
+//
+// Button phrases (from dashboard.html prefill-btn onclick values):
+//   'My weekly check-in.'               → tr-2
+//   "I'd like to do my quarterly review." → menu-quarterly-review-prep
+//   anything else                        → chat-c (shows A/B menu)
+function detectPrepRoute(messages) {
+  if (!messages || messages.length === 0) return 'chat-c';
+  const firstUserMsg = messages.find(m => m.role === 'user');
+  if (!firstUserMsg) return 'chat-c';
+  const text = firstUserMsg.content.toLowerCase().trim();
+  if (text.includes('weekly check-in') || text.includes('weekly checkin') || text.includes('weekly check in')) {
+    return 'tr-2';
+  }
+  if (text.includes('quarterly review')) {
+    return 'menu-quarterly-review-prep';
+  }
+  return 'chat-c';
+}
 
 // Build the receipt close-protocol block appended to a room's system prompt when the user
 // signals close. Shared by room=chat (Daily Work) and room=virtualteam (a VT box session).
@@ -442,10 +466,22 @@ exports.handler = async (event) => {
       }
 
     } else if (room === 'prep') {
-      const chatCPrompt = await getPrompt('chat-c');
-      if (!chatCPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'chat-c prompt not found in Supabase' }) };
-      systemPrompt = chatCPrompt;
-
+      // Direct routing — detect opening message, load correct protocol.
+      // No mid-conversation Supabase load. Prevents portal hang.
+      const prepRoute = detectPrepRoute(messages);
+      const prepPrompt = await getPrompt(prepRoute);
+      if (!prepPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: prepRoute + ' prompt not found in Supabase' }) };
+      systemPrompt = prepPrompt;
+      if (csReceiptShouldLoad(messages)) {
+        const csReceiptPrompt = await getPrompt('cs-receipt');
+        if (csReceiptPrompt) {
+          const roomLabel = prepRoute === 'tr-2' ? 'Prep Room — Weekly Planning Partner' :
+                            prepRoute === 'menu-quarterly-review-prep' ? 'Prep Room — Quarterly Review' : 'Prep Room';
+          const triggerCtx = prepRoute === 'tr-2' ? 'weekly_planning' :
+                             prepRoute === 'menu-quarterly-review-prep' ? 'quarterly_review' : 'prep_room';
+          systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, { triggerContext: triggerCtx, roomsVisited: roomLabel });
+        }
+      }
     } else {
       const hasOP = await hasOperatingPicture(userId);
       if (!hasOP) {
