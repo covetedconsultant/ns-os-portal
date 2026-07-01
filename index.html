@@ -109,6 +109,45 @@
       margin-bottom: 16px;
       display: none;
     }
+    .success-msg {
+      background: #14301c;
+      border: 1px solid #245c33;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7fd99a;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .forgot-link {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #B8860B;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      font-family: inherit;
+    }
+    .forgot-link:hover { color: #D4A017; text-decoration: underline; }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #888;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      font-family: inherit;
+    }
+    .back-link:hover { color: #aaa; text-decoration: underline; }
+    #reset-view { display: none; }
   </style>
 </head>
 <body>
@@ -120,16 +159,33 @@
         <div class="logo-sub">Chief of Staff Portal</div>
       </div>
     </div>
-    <h2>Welcome back</h2>
-    <p class="subtitle">Sign in to access your operating system</p>
-    <div class="error-msg" id="error-msg"></div>
-    <form id="login-form">
-      <label>Email</label>
-      <input type="email" id="email" placeholder="your@email.com" required autocomplete="email" />
-      <label>Password</label>
-      <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
-      <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
-    </form>
+
+    <div id="login-view">
+      <h2>Welcome back</h2>
+      <p class="subtitle">Sign in to access your operating system</p>
+      <div class="error-msg" id="error-msg"></div>
+      <form id="login-form">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="your@email.com" required autocomplete="email" />
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
+        <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
+      </form>
+      <button type="button" class="forgot-link" id="show-reset-btn">Forgot password?</button>
+    </div>
+
+    <div id="reset-view">
+      <h2>Reset your password</h2>
+      <p class="subtitle">Enter your email and we'll send you a reset link</p>
+      <div class="error-msg" id="reset-error-msg"></div>
+      <div class="success-msg" id="reset-success-msg"></div>
+      <form id="reset-form">
+        <label>Email</label>
+        <input type="email" id="reset-email" placeholder="your@email.com" required autocomplete="email" />
+        <button type="submit" class="btn-primary" id="reset-btn">Send Reset Link</button>
+      </form>
+      <button type="button" class="back-link" id="show-login-btn">Back to sign in</button>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>
