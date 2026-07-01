@@ -1,15 +1,18 @@
 // netlify/functions/chat.js
-// deploy: 2026-07-01-report-write-path
+// deploy: 2026-07-01-cs16-direct-dispatch
 // ERR-NET-25 fix: verifyUserId() rejects any request whose Authorization
 // bearer token doesn't match the claimed userId. See LOG-DEPLOY-ERRORS.
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
 //   room=setup        → CS-11 (no AOP) or CS-12 (has AOP) — onboarding/document intake
-//   room=chat         → chat-b (Daily Brief / Chief of Staff agent)
+//   room=chat         → direct dispatch via detectDailyBriefRoute(): CS-1 (North Star Brief)
+//                        or CS-16 (Talk Something Through). chat-b RETIRED 2026-07-01 — see
+//                        LOG-cs-16 and LOG-c-north-star-room. No base document loads underneath
+//                        either path; CS-1 and CS-16 are each fully self-contained.
 //   room=prep         → chat-c (Prep Room agent)
 //   room=virtualteam  → a Virtual Team box prompt (vt-*), selected by boxId from the frontend
-// CS-1, CS-9, CS-Receipt load on-demand inside chat (room=chat) only.
+// CS-9, CS-Receipt load on-demand inside chat (room=chat) only.
 // CS-Receipt also loads on-demand inside virtualteam (close fires the unified receipt + box_built).
 // AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
 // and writes the row to annual_operating_picture before returning the response.
@@ -62,6 +65,48 @@ function detectPrepRoute(messages) {
     return 'menu-quarterly-review-prep';
   }
   return 'chat-c';
+}
+
+// ── DAILY BRIEF ROOM ROUTING (added 2026-07-01) ─────────────────────────────
+// Detects the opening message and dispatches directly to CS-1 or CS-16 — no
+// base document (chat-b) loads underneath either path anymore. Mirrors the
+// detectPrepRoute model above. Replaces the prior "always load chat-b first,
+// append CS-1 on top" pattern (chat-b retired — see LOG-cs-16).
+//
+// Button phrases (from dashboard.html prefill-btn onclick values, room=chat group):
+//   "I'd like to see my North Star brief."     → cs-1
+//   "I'd like to talk something through."      → cs-16
+// Edge-case redirects (previously chat-b's own text, folded in here so they
+// aren't duplicated inside CS-1 or CS-16):
+//   mentions document upload                    → redirect-upload
+//   mentions quarterly review                    → redirect-quarterly
+//   anything else / ambiguous                    → cs-16 (accompanying mode is
+//     the correct default for an unmatched opening — CS-16 receives whatever
+//     the client arrives with, which is the safer fallback than CS-1's
+//     structured brief for a message that doesn't clearly ask for one)
+function detectDailyBriefRoute(messages) {
+  if (!messages || messages.length === 0) return 'cs-16';
+  const firstUserMsg = messages.find(m => m.role === 'user');
+  if (!firstUserMsg) return 'cs-16';
+  const text = firstUserMsg.content.toLowerCase().trim();
+
+  if (text.includes('upload') && (text.includes('document') || text.includes('file'))) {
+    return 'redirect-upload';
+  }
+  if (text.includes('quarterly review')) {
+    return 'redirect-quarterly';
+  }
+  if (text.includes('north star brief') || text.includes('morning brief') ||
+      text.includes('my brief') || text.includes('show me my') || text === 'b') {
+    return 'cs-1';
+  }
+  if (text.includes('talk something through') || text.includes('talk it through') ||
+      text.includes('talk something out') || text === 'a') {
+    return 'cs-16';
+  }
+  // Ambiguous opening — default to CS-16's accompanying mode, which is built
+  // to receive whatever the client arrives with rather than force a brief.
+  return 'cs-16';
 }
 
 // Build the receipt close-protocol block appended to a room's system prompt when the user
@@ -514,17 +559,6 @@ function normalizeTurns(turns) {
   return out;
 }
 
-function userSelectedOptionB(messages) {
-  const signals = ['option b', 'show me my brief', 'north star brief', 'my brief', 'morning brief'];
-  for (const msg of messages) {
-    if (msg.role !== 'user') continue;
-    const text = msg.content.toLowerCase().trim();
-    if (text === 'b') return true;
-    if (signals.some(s => text.includes(s))) return true;
-  }
-  return false;
-}
-
 function cs9ShouldLoad(messages) {
   const assistantPresentedOffers = messages.some(msg =>
     msg.role === 'assistant' &&
@@ -692,14 +726,36 @@ exports.handler = async (event) => {
     let prepRoute = null; // set below when room === 'prep'; used later for report-write dispatch
 
     if (room === 'chat') {
-      const chatBPrompt = await getPrompt('chat-b');
-      if (!chatBPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'chat-b prompt not found in Supabase' }) };
-      systemPrompt = chatBPrompt;
+      // Direct dispatch (2026-07-01) — replaces the prior "always load chat-b
+      // first, append on top" pattern. chat-b retired; see LOG-cs-16.
+      const dailyBriefRoute = detectDailyBriefRoute(messages);
 
-      if (userSelectedOptionB(messages)) {
-        const cs1Prompt = await getPrompt('cs-1');
-        if (cs1Prompt) systemPrompt += '\n\n---\n\n## CS-1 — MORNING MEETING\n\n' + cs1Prompt;
+      if (dailyBriefRoute === 'redirect-upload') {
+        // Folded in from chat-b's former edge-case text — no protocol load needed,
+        // this is a short fixed redirect message.
+        return {
+          statusCode: 200, headers: corsHeaders(),
+          body: JSON.stringify({ reply: "Document uploads happen in the Upload Documents chat. Head there and it will walk you through the process." })
+        };
       }
+      if (dailyBriefRoute === 'redirect-quarterly') {
+        return {
+          statusCode: 200, headers: corsHeaders(),
+          body: JSON.stringify({ reply: "Quarterly reviews have their own dedicated space — the Preparation Work chat. Head there when you're ready." })
+        };
+      }
+
+      if (dailyBriefRoute === 'cs-1') {
+        const cs1Prompt = await getPrompt('cs-1');
+        if (!cs1Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-1 prompt not found in Supabase' }) };
+        systemPrompt = cs1Prompt;
+      } else {
+        // dailyBriefRoute === 'cs-16' (Talk Something Through, or ambiguous-opening fallback)
+        const cs16Prompt = await getPrompt('cs-16');
+        if (!cs16Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-16 prompt not found in Supabase' }) };
+        systemPrompt = cs16Prompt;
+      }
+
       if (cs9ShouldLoad(messages)) {
         const cs9Prompt = await getPrompt('cs-9');
         if (cs9Prompt) systemPrompt += '\n\n---\n\n## CS-9 — RECOMMENDATIONS RESPONSE PROTOCOL\n\n' + cs9Prompt;
@@ -1036,3 +1092,4 @@ function buildContextString(ctx) {
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
 }
+
