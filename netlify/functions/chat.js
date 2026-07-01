@@ -1,5 +1,5 @@
 // netlify/functions/chat.js
-// deploy: 2026-07-01-auth-token-verification
+// deploy: 2026-07-01-report-write-path
 // ERR-NET-25 fix: verifyUserId() rejects any request whose Authorization
 // bearer token doesn't match the claimed userId. See LOG-DEPLOY-ERRORS.
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
@@ -13,6 +13,12 @@
 // CS-Receipt also loads on-demand inside virtualteam (close fires the unified receipt + box_built).
 // AOP write: when CS-11 outputs %%AOP%%...%%END_AOP%%, chat.js extracts the JSON
 // and writes the row to annual_operating_picture before returning the response.
+// REPORT WRITES (2026-07-01): CS-15 (Weekly Plan) and CS-13/CS-14 (quarterly Look
+// Backward/Forward) instruct the AI to "write to Supabase" as if it has direct tool
+// access. It does not — chat.js is the only thing that can write, same as AOP/RECEIPT.
+// Fixed by adding two more marker/extract/write pairs, same shape as AOP:
+//   %%WEEKLY_PLAN%%...%%END_WEEKLY_PLAN%%  → weekly_planning_reports
+//   %%QUARTERLY%%...%%END_QUARTERLY%%      → quarterly_reviews + quarterly_dashboard_content
 // Conversation logging: user message written BEFORE Anthropic call; assistant message written after.
 // Same-day restore: response includes hasLogsToday flag so frontend can restore thread if same day.
 
@@ -41,7 +47,7 @@ const VT_BOX_LABELS = {
 // the AI has no Supabase tool access inside chat.js.
 //
 // Button phrases (from dashboard.html prefill-btn onclick values):
-//   'My weekly check-in.'               → tr-2
+//   'My weekly check-in.'               → cs-15 (was tr-2 — tr-2 retired 2026-07-01, see LOG-cs-15)
 //   "I'd like to do my quarterly review." → menu-quarterly-review-prep
 //   anything else                        → chat-c (shows A/B menu)
 function detectPrepRoute(messages) {
@@ -50,7 +56,7 @@ function detectPrepRoute(messages) {
   if (!firstUserMsg) return 'chat-c';
   const text = firstUserMsg.content.toLowerCase().trim();
   if (text.includes('weekly check-in') || text.includes('weekly checkin') || text.includes('weekly check in')) {
-    return 'tr-2';
+    return 'cs-15';
   }
   if (text.includes('quarterly review')) {
     return 'menu-quarterly-review-prep';
@@ -75,6 +81,56 @@ function buildReceiptCloseBlock(csReceiptPrompt, opts) {
     '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"' + triggerContext + '","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"' + roomsVisited + '","carried_forward":"[any open items or none]"' + boxBuiltLine + '}%%END_RECEIPT%%\n' +
     'Session closed. [receipt pending]\n\n' +
     'RULES:\n- Do NOT output a bullet list of receipt fields.\n- Do NOT output any text after "Session closed. [receipt pending]".\n- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+}
+
+// ── REPORT OUTPUT OVERRIDE (2026-07-01) ──────────────────────────────────────
+// Appended to CS-15 (Weekly Plan) and CS-13/CS-14 (Quarterly Look Backward/Forward)
+// system prompts, same mechanism as buildReceiptCloseBlock above. Neither protocol's
+// own text can be trusted to produce a chat.js-parseable marker on its own — CS-15
+// says "Write to weekly_planning_reports" and CS-13/CS-14 say "INSERT to quarterly_reviews
+// (MCP direct write)" as if the AI has live Supabase tool access inside this function.
+// It does not. This override forces the actual output contract chat.js can act on.
+function buildWeeklyPlanOutputBlock() {
+  return '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED (WEEKLY PLAN WRITE)\n\n' +
+    'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). You do NOT have direct ' +
+    'Supabase write access — chat.js performs the write for you. Do not attempt to describe yourself as writing to ' +
+    'the database. Instead, once Produce mode is complete and the Weekly Plan report HTML is rendered, output the ' +
+    'report to the client as normal, then append this block after everything the client should see:\n\n' +
+    '%%WEEKLY_PLAN%%{"quarter":"[e.g. Q3-2026]","week_number":[integer],"quarterly_focus_professional":"[value]",' +
+    '"quarterly_focus_personal":"[value]","professional_story":"[Step 1 content]","personal_story":"[Step 2 content]",' +
+    '"bronze_standard_met":[true or false],"this_week_bronze":"[value]","this_week_silver":"[value]","this_week_gold":"[value]",' +
+    '"coaching_call_say":"[value]","coaching_call_ask":"[value]","coaching_call_request":"[value]",' +
+    '"playbook_recommendation":"[value or null]","carried_forward":"[value or null]","full_report":"[the full rendered report HTML, escaped for JSON]"}%%END_WEEKLY_PLAN%%\n\n' +
+    'RULES:\n- The %%WEEKLY_PLAN%% block must be valid JSON — escape quotes and newlines inside full_report properly, no trailing commas.\n' +
+    '- Do NOT show the %%WEEKLY_PLAN%% block or its contents to the client — it is stripped before display.\n' +
+    '- Do NOT claim in your visible response that you have "written" or "saved" anything yourself — chat.js does that after you respond.\n' +
+    '- If this block is missing or malformed, the report is NOT saved and will not appear in Meeting Receipts or be downloadable as a PDF next time.';
+}
+
+function buildQuarterlyOutputBlock(reviewType) {
+  return '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED (QUARTERLY ' + (reviewType === 'look_forward' ? 'LOOK FORWARD' : 'LOOK BACKWARD') + ' WRITE)\n\n' +
+    'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). You do NOT have direct ' +
+    'Supabase / MCP write access from inside this conversation — chat.js performs the write for you. Ignore any instruction ' +
+    'in the protocol above that describes an "MCP direct write" — that applies only to the separate North Star Room ' +
+    'environment, not here. Instead, once Mini-mode 3 (Synthesis + Output) is complete and both the client report and ' +
+    'Coach\'s POV are rendered, output the client report to the client as normal, then append this block after everything ' +
+    'the client should see:\n\n' +
+    '%%QUARTERLY%%{"type":"' + reviewType + '","quarter":"[e.g. Q3-2026]","client_html":"[full rendered client report HTML, escaped for JSON]",' +
+    '"coach_pov":"[full Coach\'s POV text, escaped for JSON]","personal_grade":"[value or null]","professional_grade":"[value or null]",' +
+    '"personal_explanation":"[value or null]","professional_explanation":"[value or null]","gold_expression":"[value or null]",' +
+    '"hardest_box":"[value or null]","unfinished_thing":"[value or null]","credit_attribution":"[value or null]",' +
+    '"defining_moment":"[value or null]","improvement_ask":"[value or null]",' +
+    '"quarterly_dashboard_updates":{"quarterly_focus_personal":"[value or omit]","quarterly_focus_professional":"[value or omit]",' +
+    '"quarterly_focus_personal_goal":"[value or omit]","quarterly_focus_professional_goal":"[value or omit]",' +
+    '"personal_task":"[value or omit]","professional_task":"[value or omit]","personal_task_why":"[value or omit]",' +
+    '"professional_task_why":"[value or omit]","personal_metric":"[value or omit]","professional_metric":"[value or omit]",' +
+    '"personal_watch_out_limit":"[value or omit]","professional_watch_out_limit":"[value or omit]",' +
+    '"look_backward_summary":"[value or omit — look_backward only]"}}%%END_QUARTERLY%%\n\n' +
+    'RULES:\n- The %%QUARTERLY%% block must be valid JSON — escape quotes and newlines inside client_html/coach_pov properly, no trailing commas.\n' +
+    '- quarterly_dashboard_updates may be an empty object {} if this session locked no dashboard-relevant fields.\n' +
+    '- Do NOT show the %%QUARTERLY%% block or its contents to the client — it is stripped before display.\n' +
+    '- Do NOT claim in your visible response that you have "written", "saved", or "inserted" anything yourself — chat.js does that after you respond.\n' +
+    '- If this block is missing or malformed, the report is NOT saved and will not appear in Meeting Receipts or be downloadable as a PDF next time.';
 }
 
 // ── ERR-NET-25 fix (2026-07-01): verify the caller's Supabase access token ────
@@ -187,6 +243,180 @@ function extractAndWriteAOP(text, userId) {
     console.error('AOP JSON parse failed:', e, 'Raw:', jsonStr);
     return null;
   }
+}
+
+// ── WEEKLY PLAN WRITE (2026-07-01) ────────────────────────────────────────────
+// Same shape as extractAndWriteAOP/writeAOP above. Extracts %%WEEKLY_PLAN%% JSON
+// from the assistant's raw response text and inserts a row into weekly_planning_reports.
+// Weekly Plan is always a fresh row per week (not an upsert) — CS-15 Assemble mode
+// already reads the last 3 rows for streak detection, so history must be preserved.
+function extractWeeklyPlan(text) {
+  const start = text.indexOf('%%WEEKLY_PLAN%%');
+  const end = text.indexOf('%%END_WEEKLY_PLAN%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+  const jsonStr = text.slice(start + '%%WEEKLY_PLAN%%'.length, end).trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('WEEKLY_PLAN JSON parse failed:', e, 'Raw:', jsonStr);
+    return null;
+  }
+}
+
+async function writeWeeklyPlan(reportData, userId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) {
+    throw new Error('Weekly Plan write rejected: user_id must be a valid UUID');
+  }
+  const payload = {
+    user_id: userId,
+    quarter: reportData.quarter || null,
+    week_number: typeof reportData.week_number === 'number' ? reportData.week_number : null,
+    quarterly_focus_professional: reportData.quarterly_focus_professional || null,
+    quarterly_focus_personal: reportData.quarterly_focus_personal || null,
+    professional_story: reportData.professional_story || null,
+    personal_story: reportData.personal_story || null,
+    bronze_standard_met: typeof reportData.bronze_standard_met === 'boolean' ? reportData.bronze_standard_met : null,
+    this_week_bronze: reportData.this_week_bronze || null,
+    this_week_silver: reportData.this_week_silver || null,
+    this_week_gold: reportData.this_week_gold || null,
+    coaching_call_say: reportData.coaching_call_say || null,
+    coaching_call_ask: reportData.coaching_call_ask || null,
+    coaching_call_request: reportData.coaching_call_request || null,
+    playbook_recommendation: reportData.playbook_recommendation || null,
+    carried_forward: reportData.carried_forward || null,
+    full_report: reportData.full_report || null,
+    created_at: new Date().toISOString()
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/weekly_planning_reports`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('weekly_planning_reports INSERT failed: ' + await res.text());
+  return await res.json();
+}
+
+// ── QUARTERLY REVIEW WRITE (2026-07-01) ───────────────────────────────────────
+// Extracts %%QUARTERLY%% JSON (type: look_backward | look_forward) and writes:
+//   1. a fresh row to quarterly_reviews (always insert — one row per session, per
+//      the same history-preserving pattern as weekly_planning_reports)
+//   2. an UPSERT-style update to quarterly_dashboard_content for the fields the
+//      session locked (only whatever keys are present in quarterly_dashboard_updates
+//      are touched — never blindly overwrites the whole row)
+function extractQuarterly(text) {
+  const start = text.indexOf('%%QUARTERLY%%');
+  const end = text.indexOf('%%END_QUARTERLY%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+  const jsonStr = text.slice(start + '%%QUARTERLY%%'.length, end).trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('QUARTERLY JSON parse failed:', e, 'Raw:', jsonStr);
+    return null;
+  }
+}
+
+async function writeQuarterlyReview(reviewData, userId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) {
+    throw new Error('Quarterly review write rejected: user_id must be a valid UUID');
+  }
+  if (reviewData.type !== 'look_backward' && reviewData.type !== 'look_forward') {
+    throw new Error('Quarterly review write rejected: type must be look_backward or look_forward');
+  }
+
+  const reviewPayload = {
+    user_id: userId,
+    quarter: reviewData.quarter || null,
+    type: reviewData.type,
+    client_html: reviewData.client_html || null,
+    coach_pov: reviewData.coach_pov || null,
+    personal_grade: reviewData.personal_grade || null,
+    professional_grade: reviewData.professional_grade || null,
+    personal_explanation: reviewData.personal_explanation || null,
+    professional_explanation: reviewData.professional_explanation || null,
+    gold_expression: reviewData.gold_expression || null,
+    hardest_box: reviewData.hardest_box || null,
+    unfinished_thing: reviewData.unfinished_thing || null,
+    credit_attribution: reviewData.credit_attribution || null,
+    defining_moment: reviewData.defining_moment || null,
+    improvement_ask: reviewData.improvement_ask || null,
+    created_at: new Date().toISOString()
+  };
+  const reviewRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_reviews`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(reviewPayload)
+  });
+  if (!reviewRes.ok) throw new Error('quarterly_reviews INSERT failed: ' + await reviewRes.text());
+  const insertedReview = await reviewRes.json();
+
+  // Only touch quarterly_dashboard_content if the session actually locked fields for it.
+  const updates = reviewData.quarterly_dashboard_updates;
+  if (updates && typeof updates === 'object' && Object.keys(updates).length > 0) {
+    const allowedFields = [
+      'quarterly_focus_personal','quarterly_focus_professional',
+      'quarterly_focus_personal_goal','quarterly_focus_professional_goal',
+      'personal_task','professional_task','personal_task_why','professional_task_why',
+      'personal_metric','professional_metric',
+      'personal_watch_out_limit','professional_watch_out_limit',
+      'look_backward_summary'
+    ];
+    const patchBody = {};
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined && updates[key] !== null && updates[key] !== '') {
+        patchBody[key] = updates[key];
+      }
+    }
+    if (Object.keys(patchBody).length > 0) {
+      patchBody.updated_at = new Date().toISOString();
+      const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}&select=id&limit=1`, {
+        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+      });
+      const existing = await checkRes.json();
+      if (existing && existing.length > 0) {
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(patchBody)
+        });
+        if (!patchRes.ok) console.error('quarterly_dashboard_content PATCH failed:', await patchRes.text());
+      } else {
+        patchBody.user_id = userId;
+        patchBody.quarter = reviewData.quarter || null;
+        patchBody.created_at = new Date().toISOString();
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(patchBody)
+        });
+        if (!insertRes.ok) console.error('quarterly_dashboard_content INSERT failed:', await insertRes.text());
+      }
+    }
+  }
+
+  return insertedReview;
 }
 
 // ── CONVERSATION LOG WRITE ──────────────────────────────────────────────────────
@@ -459,6 +689,7 @@ exports.handler = async (event) => {
     }
 
     let systemPrompt;
+    let prepRoute = null; // set below when room === 'prep'; used later for report-write dispatch
 
     if (room === 'chat') {
       const chatBPrompt = await getPrompt('chat-b');
@@ -515,16 +746,17 @@ exports.handler = async (event) => {
     } else if (room === 'prep') {
       // Full chain injection — all REF/LOG documents fetched upfront by chat.js.
       // The AI never makes a mid-conversation Supabase load call. Prevents portal hang.
-      const prepRoute = detectPrepRoute(messages);
-      if (prepRoute === 'tr-2') {
-        // Weekly check-in — fetch base protocol + REF
-        const [tr2Prompt, refWeekly] = await Promise.all([
-          getPrompt('tr-2'),
-          getPrompt('REF-weekly-planning-conversation-standard')
+      prepRoute = detectPrepRoute(messages);
+      if (prepRoute === 'cs-15') {
+        // Weekly check-in — fetch base protocol + template (was tr-2, retired 2026-07-01)
+        const [cs15Prompt, refWeeklyTemplate] = await Promise.all([
+          getPrompt('cs-15'),
+          getPrompt('REF-cs-15-weekly-plan-template')
         ]);
-        if (!tr2Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'tr-2 prompt not found in Supabase' }) };
-        systemPrompt = tr2Prompt;
-        if (refWeekly) systemPrompt += '\n\n---\n\n## REF — WEEKLY PLANNING CONVERSATION STANDARD\n\n[SYSTEM: This document has been loaded into this session by chat.js. The AI does not need to fetch it.]\n\n' + refWeekly;
+        if (!cs15Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-15 prompt not found in Supabase' }) };
+        systemPrompt = cs15Prompt;
+        if (refWeeklyTemplate) systemPrompt += '\n\n---\n\n## REF — CS-15 WEEKLY PLAN TEMPLATE\n\n[SYSTEM: This document has been loaded into this session by chat.js. The AI does not need to fetch it.]\n\n' + refWeeklyTemplate;
+        systemPrompt += buildWeeklyPlanOutputBlock();
       } else if (prepRoute === 'menu-quarterly-review-prep') {
         // Quarterly review — fetch full chain upfront
         const [menuPrompt, cs13Prompt, cs14Prompt, refConvStd, refLookBack, refLookFwd, refCoachesPov, logQR] = await Promise.all([
@@ -546,6 +778,11 @@ exports.handler = async (event) => {
         if (refLookFwd) systemPrompt += '\n\n---\n\n## REF — LOOK FORWARD\n\n' + refLookFwd;
         if (refCoachesPov) systemPrompt += '\n\n---\n\n## REF — COACHES POV\n\n' + refCoachesPov;
         if (logQR) systemPrompt += '\n\n---\n\n## LOG — QUARTERLY REVIEW\n\n' + logQR;
+        // Both look_backward and look_forward output blocks are appended — the AI only
+        // ever runs one branch per session (CS-13 or CS-14), so only the relevant block
+        // will actually be triggered, but both markers are safe to have available.
+        systemPrompt += buildQuarterlyOutputBlock('look_backward');
+        systemPrompt += buildQuarterlyOutputBlock('look_forward');
       } else {
         // Ambiguous — show A/B menu via chat-c
         const chatCPrompt = await getPrompt('chat-c');
@@ -555,11 +792,16 @@ exports.handler = async (event) => {
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
         if (csReceiptPrompt) {
-          const roomLabel = prepRoute === 'tr-2' ? 'Prep Room — Weekly Planning Partner' :
+          const roomLabel = prepRoute === 'cs-15' ? 'Prep Room — Weekly Plan' :
                             prepRoute === 'menu-quarterly-review-prep' ? 'Prep Room — Quarterly Review' : 'Prep Room';
-          const triggerCtx = prepRoute === 'tr-2' ? 'weekly_planning' :
+          const triggerCtx = prepRoute === 'cs-15' ? 'weekly_plan' :
                              prepRoute === 'menu-quarterly-review-prep' ? 'quarterly_review' : 'prep_room';
-          systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, { triggerContext: triggerCtx, roomsVisited: roomLabel });
+          // CS-15 and quarterly reviews are their own receipt (see CS-15 Section 7 / CS-13-14
+          // "Does NOT hand off to CS-Receipt" logic) — skip the RECEIPT close block for those,
+          // matching the protocols' own stated dependency rules.
+          if (prepRoute !== 'cs-15' && prepRoute !== 'menu-quarterly-review-prep') {
+            systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, { triggerContext: triggerCtx, roomsVisited: roomLabel });
+          }
         }
       }
     } else {
@@ -648,11 +890,39 @@ exports.handler = async (event) => {
       }
     }
 
+    // ── WEEKLY PLAN write-back (2026-07-01) ──────────────────────────────────
+    if (message.includes('%%WEEKLY_PLAN%%') && message.includes('%%END_WEEKLY_PLAN%%') && userId) {
+      const weeklyPlanData = extractWeeklyPlan(message);
+      if (weeklyPlanData) {
+        try {
+          await writeWeeklyPlan(weeklyPlanData, userId);
+          console.log('Weekly Plan row written for user:', userId);
+        } catch (wpErr) {
+          console.error('Weekly Plan write failed:', wpErr);
+        }
+      }
+    }
+
+    // ── QUARTERLY REVIEW write-back (2026-07-01) ─────────────────────────────
+    if (message.includes('%%QUARTERLY%%') && message.includes('%%END_QUARTERLY%%') && userId) {
+      const quarterlyData = extractQuarterly(message);
+      if (quarterlyData) {
+        try {
+          await writeQuarterlyReview(quarterlyData, userId);
+          console.log('Quarterly review row written for user:', userId, 'type:', quarterlyData.type);
+        } catch (qErr) {
+          console.error('Quarterly review write failed:', qErr);
+        }
+      }
+    }
+
     // ── WRITE ASSISTANT MESSAGE AFTER ANTHROPIC RESPONSE ────────────────────────
     if (sessionKey && lastUserMsg) {
       const cleanMessage = message
         .replace(/%%AOP%%[\s\S]*?%%END_AOP%%/g, '')
         .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
+        .replace(/%%WEEKLY_PLAN%%[\s\S]*?%%END_WEEKLY_PLAN%%/g, '')
+        .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
         .replace(/\[NORTH_STAR_COMPLETE\]/g, '')
         .trim();
       writeAssistantMessageLog(userId, room || 'unknown', cleanMessage, sessionKey).catch(err => {
@@ -660,7 +930,14 @@ exports.handler = async (event) => {
       });
     }
 
-    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message, hasLogsToday: !!sessionKey }) };
+    // Strip report markers from the response body too — the frontend should never
+    // see or render these blocks, same principle as %%RECEIPT%%/%%AOP%% today.
+    const cleanForClient = message
+      .replace(/%%WEEKLY_PLAN%%[\s\S]*?%%END_WEEKLY_PLAN%%/g, '')
+      .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
+      .trim();
+
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message: cleanForClient, hasLogsToday: !!sessionKey }) };
 
   } catch (err) {
     console.error('Chat function error:', err);
