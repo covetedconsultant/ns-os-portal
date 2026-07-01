@@ -1,5 +1,7 @@
 // netlify/functions/chat.js
-// deploy: 2026-06-29-full-prep-chain-injection
+// deploy: 2026-07-01-auth-token-verification
+// ERR-NET-25 fix: verifyUserId() rejects any request whose Authorization
+// bearer token doesn't match the claimed userId. See LOG-DEPLOY-ERRORS.
 // Daily Brief active memory (Item 4): room='chat' loads the rolling DAILY_LOOKBACK_DAYS
 // of its own verbatim conversation as context; older history carried by receipts.
 // Routing by room:
@@ -73,6 +75,39 @@ function buildReceiptCloseBlock(csReceiptPrompt, opts) {
     '%%RECEIPT%%{"session_scope":"[one sentence]","bronze_task":"[the task]","bronze_status":"yes","completion_status":"bronze","trigger_context":"' + triggerContext + '","outcome_type":"task_completed","thread_tag":"[topic slug]","rooms_visited":"' + roomsVisited + '","carried_forward":"[any open items or none]"' + boxBuiltLine + '}%%END_RECEIPT%%\n' +
     'Session closed. [receipt pending]\n\n' +
     'RULES:\n- Do NOT output a bullet list of receipt fields.\n- Do NOT output any text after "Session closed. [receipt pending]".\n- The %%RECEIPT%% block must be valid JSON — no trailing commas, no line breaks inside.\n- The frontend detects this block, strips it from display, writes it to Supabase, and replaces [receipt pending] with the real receipt number.\n- If you output a human-readable summary instead, the receipt write FAILS and the session is not recorded.';
+}
+
+// ── ERR-NET-25 fix (2026-07-01): verify the caller's Supabase access token ────
+// actually belongs to the userId the request claims. Before this fix, chat.js
+// trusted whatever userId the frontend sent in the JSON body with no check that
+// the request was actually authenticated as that person -- someone editing the
+// request in browser dev tools could ask for any other user's data (operating
+// picture, session receipts, conversation history) just by changing the userId
+// field. Fix: read the Authorization header, ask Supabase's own /auth/v1/user
+// endpoint whose token this is, and reject the request unless that identity
+// matches the claimed userId. Does not touch any existing query or write path --
+// this is a guard clause that runs before any of them.
+async function verifyUserId(event, claimedUserId) {
+  const authHeader = event.headers['authorization'] || event.headers['Authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { ok: false, reason: 'missing_token' };
+  }
+  const token = authHeader.slice('Bearer '.length);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return { ok: false, reason: 'invalid_token' };
+    const userData = await res.json();
+    if (!userData || !userData.id) return { ok: false, reason: 'invalid_token' };
+    if (!claimedUserId || userData.id !== claimedUserId) {
+      return { ok: false, reason: 'user_mismatch' };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('verifyUserId error:', err);
+    return { ok: false, reason: 'verify_error' };
+  }
 }
 
 async function getPrompt(skillId) {
@@ -410,6 +445,18 @@ exports.handler = async (event) => {
 
   try {
     const { messages, context, userName, userId, room, boxId } = JSON.parse(event.body);
+
+    // ── ERR-NET-25: reject requests whose Authorization token doesn't match ────
+    // the claimed userId. userId is required for every real room; only allow it
+    // to be absent if the frontend genuinely sent none (defensive, should not
+    // happen in practice since every call site sends userId).
+    if (userId) {
+      const verification = await verifyUserId(event, userId);
+      if (!verification.ok) {
+        console.error('Auth verification failed:', verification.reason, 'claimed userId:', userId);
+        return { statusCode: 401, headers: corsHeaders(), body: JSON.stringify({ error: 'Unauthorized' }) };
+      }
+    }
 
     let systemPrompt;
 
