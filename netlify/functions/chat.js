@@ -891,9 +891,23 @@ exports.handler = async (event) => {
     }
 
     // ── WEEKLY PLAN write-back (2026-07-01) ──────────────────────────────────
+    // reportHtml/reportType (2026-07-01, Task A): the frontend needs the actual
+    // rendered report HTML to build the PDF-download toolbar + iframe. Previously
+    // this HTML was parsed here only to write to Supabase, then discarded — the
+    // frontend never received it. Now the same parsed value is also returned in
+    // the response body. reportHtml/reportType stay null/absent on every normal
+    // turn — only populated the one turn a report marker actually fires.
+    let reportHtml = null;
+    let reportType = null;
     if (message.includes('%%WEEKLY_PLAN%%') && message.includes('%%END_WEEKLY_PLAN%%') && userId) {
       const weeklyPlanData = extractWeeklyPlan(message);
       if (weeklyPlanData) {
+        // weekly_planning_reports' HTML field is full_report (per CS-15's own
+        // write-list) — NOT client_html, which is the quarterly_reviews field name.
+        if (weeklyPlanData.full_report) {
+          reportHtml = weeklyPlanData.full_report;
+          reportType = 'weekly_plan';
+        }
         try {
           await writeWeeklyPlan(weeklyPlanData, userId);
           console.log('Weekly Plan row written for user:', userId);
@@ -907,6 +921,12 @@ exports.handler = async (event) => {
     if (message.includes('%%QUARTERLY%%') && message.includes('%%END_QUARTERLY%%') && userId) {
       const quarterlyData = extractQuarterly(message);
       if (quarterlyData) {
+        // quarterly_reviews' HTML field is client_html (per CS-13/CS-14's own
+        // write-list) — NOT full_report, which is the weekly_planning_reports field name.
+        if (quarterlyData.client_html) {
+          reportHtml = quarterlyData.client_html;
+          reportType = quarterlyData.type === 'look_forward' ? 'look_forward' : 'look_backward';
+        }
         try {
           await writeQuarterlyReview(quarterlyData, userId);
           console.log('Quarterly review row written for user:', userId, 'type:', quarterlyData.type);
@@ -930,14 +950,21 @@ exports.handler = async (event) => {
       });
     }
 
-    // Strip report markers from the response body too — the frontend should never
-    // see or render these blocks, same principle as %%RECEIPT%%/%%AOP%% today.
+    // Strip report markers from the response body too — the raw marker JSON should
+    // never appear in the visible chat text. The parsed HTML itself is carried
+    // separately via reportHtml/reportType (set above), not left inside message.
     const cleanForClient = message
       .replace(/%%WEEKLY_PLAN%%[\s\S]*?%%END_WEEKLY_PLAN%%/g, '')
       .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
       .trim();
 
-    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ message: cleanForClient, hasLogsToday: !!sessionKey }) };
+    const responseBody = { message: cleanForClient, hasLogsToday: !!sessionKey };
+    if (reportHtml) {
+      responseBody.reportHtml = reportHtml;
+      responseBody.reportType = reportType;
+    }
+
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify(responseBody) };
 
   } catch (err) {
     console.error('Chat function error:', err);
