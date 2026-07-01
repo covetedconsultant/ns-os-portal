@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-01-d -->
+  <!-- cache-bust: 2026-06-13-g -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -156,6 +155,18 @@
     .msg-bubble { padding: 11px 15px; border-radius: 14px; font-size: 14px; line-height: 1.7; }
     .msg.user .msg-bubble { background: var(--gold); color: #fff; border-bottom-right-radius: 4px; white-space: pre-wrap; max-width: 80%; }
     .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; width: 100%; }
+    /* ── REPORT CARD (Task A, 2026-07-01) ── shared by Weekly Plan / Look Backward / Look Forward.
+       Report HTML is a full standalone document (own <html><head> + CSS vars) so it renders inside
+       a sandboxed iframe, not innerHTML'd into the bubble — avoids CSS variable collisions with the
+       portal's own :root (both define --gold, etc). Toolbar sits above the iframe, matches confirmed mockup. */
+    .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.04); width: 100%; }
+    .report-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .report-toolbar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .report-download-btn { display: flex; align-items: center; gap: 8px; background: var(--text); color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .report-download-btn:hover { opacity: 0.85; }
+    .report-download-btn svg { width: 14px; height: 14px; }
+    .report-download-btn.downloading { opacity: 0.6; cursor: wait; }
+    .report-iframe { display: block; width: 100%; min-height: 600px; border: none; background: #fff; }
     .msg.assistant .msg-bubble p { margin: 0 0 10px; }
     .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
     .msg.assistant .msg-bubble strong { color: var(--text); font-weight: 700; }
@@ -938,22 +949,6 @@ const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
 const API_ENDPOINT = '/api/chat';
 const HISTORY_KEY = 'ns_chat_history';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let authSession = null;
-function supabaseHeaders(token) {
-  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}` };
-}
-// ERR-NET-25 fix (2026-07-01): chat.js now verifies that the Authorization
-// bearer token actually belongs to the userId in the request body -- before
-// this fix, requests to /api/chat sent no Authorization header at all, so
-// chat.js trusted whatever userId was in the JSON body with no verification.
-// This helper attaches the real Supabase session token (set at DOMContentLoaded,
-// available before any of the four call sites that use it fire) to every
-// /api/chat request, the same way supabaseHeaders() already does for direct
-// Supabase REST calls.
-function chatApiHeaders() {
-  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token || ''}` };
-}
 let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [], virtualteam: [] };
@@ -1081,53 +1076,9 @@ function startCountdownRedirect(messagesId) {
 
 // ── INIT ────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  // ── Track 1 cross-origin session handoff (2026-07-01, ERR-NET-23) ──────
-  // ns-os-welcome (a DIFFERENT origin, Leadpages) cannot establish a session
-  // this origin can see -- localStorage is origin-scoped. Instead it hands
-  // tokens via a URL FRAGMENT (never sent to any server), and THIS origin
-  // establishes the session itself via setSession(), exactly like a normal
-  // password login would, before falling through to the existing session
-  // check below.
-  if (window.location.hash && window.location.hash.includes('access_token=')) {
-    const fragParams = new URLSearchParams(window.location.hash.slice(1));
-    const fragAccessToken = fragParams.get('access_token');
-    const fragRefreshToken = fragParams.get('refresh_token');
-    const fragUserId = fragParams.get('ns_user_id');
-    if (fragAccessToken && fragRefreshToken) {
-      const { error: setSessionError } = await supabaseClient.auth.setSession({
-        access_token: fragAccessToken,
-        refresh_token: fragRefreshToken
-      });
-      if (setSessionError) {
-        console.error('Track 1 setSession failed:', setSessionError);
-      } else if (fragUserId) {
-        localStorage.setItem('ns_user_id', fragUserId);
-      }
-      // ERR-NET-24 fix (2026-07-01): strip ONLY the hash fragment here --
-      // do NOT touch window.location.search. An earlier version stripped
-      // '?new=pending' from the query string at this point, which ran
-      // BEFORE the later `urlParams.get('new')` check (below) ever read it,
-      // silently breaking CS-11 auto-start for every Track 1 arrival (the
-      // new user landed on dashboard home instead of Your Setup). The query
-      // string must survive untouched until the later check has run; ITS
-      // OWN replaceState call (further down) is what clears it afterward.
-      window.history.replaceState({}, '', window.location.pathname + window.location.search);
-    }
-  }
-
-  const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
-  if (!sbSession) { window.location.href = 'index.html'; return; }
-  authSession = sbSession;
-  const email = sbSession.user.email;
-  // ERR-NET-22 fix (2026-07-01): trust the live Supabase session as the
-  // source of truth for userId. A stale localStorage.ns_user_id from a
-  // PREVIOUS user's login on this browser was being preferred over the
-  // freshly authenticated session, causing the wrong profile to load
-  // (discovered during Track 1 auto-login testing -- a brand-new test
-  // user was shown Alzay's name/profile because localStorage still held
-  // Alzay's UUID from an earlier session on the same browser).
-  const userId = sbSession.user.id;
-  localStorage.setItem('ns_user_id', userId);
+  const email = localStorage.getItem('ns_email');
+  const userId = localStorage.getItem('ns_user_id');
+  if (!email || !userId) { window.location.href = 'index.html'; return; }
   session = { email, userId };
   await loadProfile(email, userId);
   await loadHomeContext();
@@ -1141,7 +1092,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       launchConfetti();
     }, 800);
     window.history.replaceState({}, '', window.location.pathname);
-  } else if (urlParams.get('new') === 'true' || urlParams.get('new') === 'pending') {
+  } else if (urlParams.get('new') === 'true') {
     window.history.replaceState({}, '', window.location.pathname);
     switchView('setup');
     setTimeout(() => triggerAutoStart(), 600);
@@ -1163,7 +1114,7 @@ async function triggerAutoStart() {
   try {
     const context = await buildContext();
     const res = await fetch(API_ENDPOINT, {
-      method: 'POST', headers: chatApiHeaders(),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: [{ role: 'user', content: '__AUTOSTART__' }], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name })
     });
     typingEl.remove();
@@ -1186,16 +1137,16 @@ async function triggerAutoStart() {
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────
 async function sbQuery(table, params = '') {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: supabaseHeaders(authSession?.access_token) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
   return res.json();
 }
 async function sbInsert(table, payload) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { ...supabaseHeaders(authSession?.access_token), 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('Supabase insert failed: ' + await res.text());
   return res.json();
 }
 async function sbPatch(table, params, payload) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: { ...supabaseHeaders(authSession?.access_token), 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('Supabase patch failed: ' + await res.text());
   return res.json();
 }
@@ -1616,7 +1567,7 @@ async function vtAutoStart() {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -1676,13 +1627,17 @@ async function sendMessage(chatId) {
     const context = await buildContext();
     const reqBody = { messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId };
     if (chatId === 'virtualteam') reqBody.boxId = vtSelectedBox;
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify(reqBody) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reqBody) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     const rawReply = data.message || 'Something went wrong.';
     const { displayText, receiptNumber } = await processReceiptBlock(rawReply, messagesId);
-    appendMessage(messagesId, 'assistant', displayText);
+    // reportHtml/reportType (Task A, 2026-07-01): present only on the turn a
+    // %%WEEKLY_PLAN%%/%%QUARTERLY%% marker fired server-side — see chat.js.
+    // Two different things arriving on the same response — receiptNumber and
+    // reportHtml are handled independently, not conflated.
+    appendMessage(messagesId, 'assistant', displayText, chatId, data.reportHtml || null, data.reportType || null);
     chatHistories[chatId].push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
     // Save session snapshot to history after first exchange
@@ -1725,7 +1680,72 @@ function renderMarkdown(text) {
 const ICON_COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function appendMessage(messagesId, role, text, chatId) {
+// ── REPORT CARD (Task A, 2026-07-01) ──────────────────────────────────
+// reportHtml is a FULL standalone HTML document (own <html><head>, own CSS vars —
+// see REF-cs-15-weekly-plan-template / REF-quarterly-review-look-backward/-forward).
+// It cannot be innerHTML'd into .msg-bubble without its :root vars (e.g. --gold)
+// colliding with the portal's own — rendered in a sandboxed iframe instead.
+const REPORT_TYPE_LABELS = {
+  weekly_plan: 'Weekly Plan',
+  look_backward: 'Quarterly Review — Look Backward',
+  look_forward: 'Quarterly Review — Look Forward'
+};
+
+function buildReportCard(reportHtml, reportType) {
+  const card = document.createElement('div'); card.className = 'report-card';
+  const toolbar = document.createElement('div'); toolbar.className = 'report-toolbar';
+  const label = document.createElement('div'); label.className = 'report-toolbar-label';
+  label.textContent = REPORT_TYPE_LABELS[reportType] || 'Report';
+  const downloadBtn = document.createElement('button'); downloadBtn.className = 'report-download-btn';
+  downloadBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>Download PDF';
+  const iframe = document.createElement('iframe'); iframe.className = 'report-iframe'; iframe.srcdoc = reportHtml;
+  iframe.addEventListener('load', () => {
+    // Auto-size the iframe to its rendered content so the card doesn't scroll internally.
+    try {
+      const h = iframe.contentWindow.document.documentElement.scrollHeight;
+      if (h > 0) iframe.style.height = h + 'px';
+    } catch (e) { /* cross-origin-style access denial shouldn't happen for srcdoc, but don't let it break rendering */ }
+  });
+  downloadBtn.addEventListener('click', () => {
+    if (downloadBtn.classList.contains('downloading')) return;
+    downloadBtn.classList.add('downloading');
+    const origLabel = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = 'Preparing…';
+    // html2pdf needs real DOM to render from — build an offscreen container from the
+    // same HTML string rather than reaching into the iframe (srcdoc documents can be
+    // finicky to hand to html2canvas directly across the iframe boundary).
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed; left:-99999px; top:0; width:794px;';
+    const innerFrame = document.createElement('iframe');
+    innerFrame.style.cssText = 'width:794px; border:none;';
+    container.appendChild(innerFrame);
+    document.body.appendChild(container);
+    innerFrame.addEventListener('load', () => {
+      const targetEl = innerFrame.contentWindow.document.documentElement;
+      const filenameLabel = (REPORT_TYPE_LABELS[reportType] || 'Report').replace(/[^a-z0-9]+/gi, '-');
+      html2pdf().set({
+        margin: 0,
+        filename: `${filenameLabel}-${new Date().toISOString().slice(0,10)}.pdf`,
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(targetEl).save().then(() => {
+        downloadBtn.classList.remove('downloading'); downloadBtn.innerHTML = origLabel;
+        document.body.removeChild(container);
+      }).catch((err) => {
+        console.error('PDF generation failed:', err);
+        downloadBtn.classList.remove('downloading'); downloadBtn.innerHTML = origLabel;
+        document.body.removeChild(container);
+      });
+    });
+    innerFrame.srcdoc = reportHtml;
+  });
+  toolbar.appendChild(label); toolbar.appendChild(downloadBtn);
+  card.appendChild(toolbar); card.appendChild(iframe);
+  return card;
+}
+
+function appendMessage(messagesId, role, text, chatId, reportHtml, reportType) {
   const msgs = document.getElementById(messagesId);
   const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   const row = document.createElement('div'); row.className = 'msg-row';
@@ -1744,7 +1764,9 @@ function appendMessage(messagesId, role, text, chatId) {
     retryBtn.addEventListener('click', () => { retryMessage(messagesId, chatId || ''); });
     actionsEl.appendChild(retryBtn);
     const timeEl = document.createElement('div'); timeEl.className = 'msg-time'; timeEl.textContent = time;
-    div.appendChild(bubble); div.appendChild(actionsEl); div.appendChild(timeEl);
+    div.appendChild(bubble);
+    if (reportHtml) div.appendChild(buildReportCard(reportHtml, reportType));
+    div.appendChild(actionsEl); div.appendChild(timeEl);
   } else {
     const bubble = document.createElement('div'); bubble.className = 'msg-bubble'; bubble.textContent = text;
     const actionsEl = document.createElement('div'); actionsEl.className = 'msg-actions';
@@ -1768,7 +1790,7 @@ function appendTyping(messagesId) {
   return row;
 }
 
-async function logout() { await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
+function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
 function prefillChat(chatId, text) {
   const inputId = chatId === 'chat' ? 'chat-input' : 'chat-input-' + chatId;
@@ -1803,7 +1825,7 @@ async function retryMessage(messagesId, chatId) {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -1963,6 +1985,6 @@ function adminCopyAll(idx) {
   }).catch(() => {});
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
-
