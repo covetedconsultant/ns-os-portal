@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-06-13-g -->
+  <!-- cache-bust: 2026-07-01-a -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1074,7 +1074,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!sbSession) { window.location.href = 'index.html'; return; }
   authSession = sbSession;
   const email = sbSession.user.email;
-  const userId = localStorage.getItem('ns_user_id') || sbSession.user.id;
+  // ERR-NET-22 fix (2026-07-01): trust the live Supabase session as the
+  // source of truth for userId. A stale localStorage.ns_user_id from a
+  // PREVIOUS user's login on this browser was being preferred over the
+  // freshly authenticated session, causing the wrong profile to load
+  // (discovered during Track 1 auto-login testing -- a brand-new test
+  // user was shown Alzay's name/profile because localStorage still held
+  // Alzay's UUID from an earlier session on the same browser).
+  const userId = sbSession.user.id;
+  localStorage.setItem('ns_user_id', userId);
   session = { email, userId };
   await loadProfile(email, userId);
   await loadHomeContext();
