@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-01-a -->
+  <!-- cache-bust: 2026-07-01-b -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1070,6 +1070,34 @@ function startCountdownRedirect(messagesId) {
 
 // ── INIT ────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // ── Track 1 cross-origin session handoff (2026-07-01, ERR-NET-23) ──────
+  // ns-os-welcome (a DIFFERENT origin, Leadpages) cannot establish a session
+  // this origin can see -- localStorage is origin-scoped. Instead it hands
+  // tokens via a URL FRAGMENT (never sent to any server), and THIS origin
+  // establishes the session itself via setSession(), exactly like a normal
+  // password login would, before falling through to the existing session
+  // check below.
+  if (window.location.hash && window.location.hash.includes('access_token=')) {
+    const fragParams = new URLSearchParams(window.location.hash.slice(1));
+    const fragAccessToken = fragParams.get('access_token');
+    const fragRefreshToken = fragParams.get('refresh_token');
+    const fragUserId = fragParams.get('ns_user_id');
+    if (fragAccessToken && fragRefreshToken) {
+      const { error: setSessionError } = await supabaseClient.auth.setSession({
+        access_token: fragAccessToken,
+        refresh_token: fragRefreshToken
+      });
+      if (setSessionError) {
+        console.error('Track 1 setSession failed:', setSessionError);
+      } else if (fragUserId) {
+        localStorage.setItem('ns_user_id', fragUserId);
+      }
+      // Strip the fragment immediately -- tokens should not linger in the
+      // address bar or browser history any longer than necessary.
+      window.history.replaceState({}, '', window.location.pathname + window.location.search.replace(/[?&]new=pending/, ''));
+    }
+  }
+
   const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
   if (!sbSession) { window.location.href = 'index.html'; return; }
   authSession = sbSession;
@@ -1096,7 +1124,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       launchConfetti();
     }, 800);
     window.history.replaceState({}, '', window.location.pathname);
-  } else if (urlParams.get('new') === 'true') {
+  } else if (urlParams.get('new') === 'true' || urlParams.get('new') === 'pending') {
     window.history.replaceState({}, '', window.location.pathname);
     switchView('setup');
     setTimeout(() => triggerAutoStart(), 600);
