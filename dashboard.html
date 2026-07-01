@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -937,6 +938,11 @@ const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
 const API_ENDPOINT = '/api/chat';
 const HISTORY_KEY = 'ns_chat_history';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let authSession = null;
+function supabaseHeaders(token) {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}` };
+}
 let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [], virtualteam: [] };
@@ -1064,9 +1070,11 @@ function startCountdownRedirect(messagesId) {
 
 // ── INIT ────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  const email = localStorage.getItem('ns_email');
-  const userId = localStorage.getItem('ns_user_id');
-  if (!email || !userId) { window.location.href = 'index.html'; return; }
+  const { data: { session: sbSession } } = await supabaseClient.auth.getSession();
+  if (!sbSession) { window.location.href = 'index.html'; return; }
+  authSession = sbSession;
+  const email = sbSession.user.email;
+  const userId = localStorage.getItem('ns_user_id') || sbSession.user.id;
   session = { email, userId };
   await loadProfile(email, userId);
   await loadHomeContext();
@@ -1125,16 +1133,16 @@ async function triggerAutoStart() {
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────
 async function sbQuery(table, params = '') {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: supabaseHeaders(authSession?.access_token) });
   return res.json();
 }
 async function sbInsert(table, payload) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { ...supabaseHeaders(authSession?.access_token), 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('Supabase insert failed: ' + await res.text());
   return res.json();
 }
 async function sbPatch(table, params, payload) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { method: 'PATCH', headers: { ...supabaseHeaders(authSession?.access_token), 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('Supabase patch failed: ' + await res.text());
   return res.json();
 }
@@ -1707,7 +1715,7 @@ function appendTyping(messagesId) {
   return row;
 }
 
-function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+async function logout() { await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
 
 function prefillChat(chatId, text) {
   const inputId = chatId === 'chat' ? 'chat-input' : 'chat-input-' + chatId;
@@ -1904,3 +1912,4 @@ function adminCopyAll(idx) {
 </script>
 </body>
 </html>
+
