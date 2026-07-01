@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-01-c -->
+  <!-- cache-bust: 2026-07-01-d -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -943,6 +943,17 @@ let authSession = null;
 function supabaseHeaders(token) {
   return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}` };
 }
+// ERR-NET-25 fix (2026-07-01): chat.js now verifies that the Authorization
+// bearer token actually belongs to the userId in the request body -- before
+// this fix, requests to /api/chat sent no Authorization header at all, so
+// chat.js trusted whatever userId was in the JSON body with no verification.
+// This helper attaches the real Supabase session token (set at DOMContentLoaded,
+// available before any of the four call sites that use it fire) to every
+// /api/chat request, the same way supabaseHeaders() already does for direct
+// Supabase REST calls.
+function chatApiHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token || ''}` };
+}
 let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [], virtualteam: [] };
@@ -1152,7 +1163,7 @@ async function triggerAutoStart() {
   try {
     const context = await buildContext();
     const res = await fetch(API_ENDPOINT, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: chatApiHeaders(),
       body: JSON.stringify({ messages: [{ role: 'user', content: '__AUTOSTART__' }], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name })
     });
     typingEl.remove();
@@ -1605,7 +1616,7 @@ async function vtAutoStart() {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -1665,7 +1676,7 @@ async function sendMessage(chatId) {
     const context = await buildContext();
     const reqBody = { messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId };
     if (chatId === 'virtualteam') reqBody.boxId = vtSelectedBox;
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reqBody) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify(reqBody) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -1792,7 +1803,7 @@ async function retryMessage(messagesId, chatId) {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
