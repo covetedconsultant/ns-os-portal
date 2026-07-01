@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-01-b -->
+  <!-- cache-bust: 2026-07-01-c -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1092,9 +1092,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else if (fragUserId) {
         localStorage.setItem('ns_user_id', fragUserId);
       }
-      // Strip the fragment immediately -- tokens should not linger in the
-      // address bar or browser history any longer than necessary.
-      window.history.replaceState({}, '', window.location.pathname + window.location.search.replace(/[?&]new=pending/, ''));
+      // ERR-NET-24 fix (2026-07-01): strip ONLY the hash fragment here --
+      // do NOT touch window.location.search. An earlier version stripped
+      // '?new=pending' from the query string at this point, which ran
+      // BEFORE the later `urlParams.get('new')` check (below) ever read it,
+      // silently breaking CS-11 auto-start for every Track 1 arrival (the
+      // new user landed on dashboard home instead of Your Setup). The query
+      // string must survive untouched until the later check has run; ITS
+      // OWN replaceState call (further down) is what clears it afterward.
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
     }
   }
 
