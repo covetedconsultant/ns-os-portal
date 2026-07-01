@@ -39,6 +39,7 @@ async function hasOperatingPicture(userId, accessToken) {
   return Array.isArray(data) && data.length > 0;
 }
 
+// ── LOGIN ──────────────────────────────────────────────────────────
 const form = document.getElementById('login-form');
 if (form) {
   form.addEventListener('submit', async (e) => {
@@ -84,5 +85,60 @@ if (form) {
       console.error('AOP check failed:', err);
       window.location.href = 'dashboard.html';
     }
+  });
+}
+
+// ── FORGOT PASSWORD — view toggle ─────────────────────────────────
+const loginView = document.getElementById('login-view');
+const resetView = document.getElementById('reset-view');
+const showResetBtn = document.getElementById('show-reset-btn');
+const showLoginBtn = document.getElementById('show-login-btn');
+
+if (showResetBtn) {
+  showResetBtn.addEventListener('click', () => {
+    loginView.style.display = 'none';
+    resetView.style.display = 'block';
+  });
+}
+if (showLoginBtn) {
+  showLoginBtn.addEventListener('click', () => {
+    resetView.style.display = 'none';
+    loginView.style.display = 'block';
+  });
+}
+
+// ── FORGOT PASSWORD — send reset email ────────────────────────────
+const resetForm = document.getElementById('reset-form');
+if (resetForm) {
+  resetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('reset-email').value.trim().toLowerCase();
+    const btn = document.getElementById('reset-btn');
+    const errEl = document.getElementById('reset-error-msg');
+    const successEl = document.getElementById('reset-success-msg');
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    errEl.style.display = 'none';
+    successEl.style.display = 'none';
+
+    const redirectTo = window.location.origin + '/reset-password.html';
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link';
+
+    if (error) {
+      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.style.display = 'block';
+      console.error('Reset request failed:', error);
+      return;
+    }
+
+    // Always show success, even if the email doesn't exist — don't reveal
+    // which emails are registered.
+    successEl.textContent = 'If an account exists for that email, a reset link is on its way.';
+    successEl.style.display = 'block';
+    resetForm.reset();
   });
 }
