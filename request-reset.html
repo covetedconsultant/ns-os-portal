@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>North Star OS — Set Up Your Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #242424;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .logo-star {
+      width: 36px;
+      height: 36px;
+      background: #B8860B;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .logo-sub {
+      font-size: 11px;
+      color: #888;
+      margin-top: 1px;
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #aaa;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 18px;
+      outline: none;
+      transition: border 0.15s;
+    }
+    input:focus { border-color: #B8860B; }
+    input:disabled { color: #888; }
+    .btn-primary {
+      width: 100%;
+      background: #B8860B;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #D4A017; }
+    .btn-primary:disabled { background: #555; cursor: not-allowed; }
+    .error-msg {
+      background: #3d1515;
+      border: 1px solid #6b2020;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #f08080;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .success-msg {
+      background: #14301c;
+      border: 1px solid #245c33;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7fd99a;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .sign-in-link {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #B8860B;
+      text-decoration: none;
+    }
+    .sign-in-link:hover { color: #D4A017; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-star">★</div>
+      <div>
+        <div class="logo-text">North Star OS</div>
+        <div class="logo-sub">Chief of Staff Portal</div>
+      </div>
+    </div>
+
+    <div id="form-view">
+      <h2>Set up your login</h2>
+      <p class="subtitle" id="subtitle-text">We'll send a link to your email to set a password for future visits.</p>
+      <div class="error-msg" id="error-msg"></div>
+      <div class="success-msg" id="success-msg"></div>
+      <form id="request-form">
+        <label>Email</label>
+        <input type="email" id="email-input" placeholder="name@example.com" required autocomplete="email" />
+        <button type="submit" class="btn-primary" id="submit-btn">Send me the link</button>
+      </form>
+      <a href="index.html" class="sign-in-link">Back to sign in</a>
+    </div>
+  </div>
+
+  <script>
+    // ── request-reset.html ──────────────────────────────────────────────────
+    // Built 2026-07-01. Destination for the "haven't set up your login yet"
+    // link in the Day 1-5 onboarding emails (see EMAILS-day1-5-onboarding.md
+    // and SPEC-purchase-to-first-session.md). The buyer's first entry into the
+    // portal is passwordless (Track 1 auto-login) -- this page is how they set
+    // a real password for RETURN visits, per Track 2.
+    //
+    // Flow: reads ?email=... from the URL (pre-filled from the email that sent
+    // them here, so they don't have to retype it), calls Supabase's own
+    // resetPasswordForEmail(), which sends a real reset email whose link lands
+    // on reset-password.html (already built/live) -- the same page and same
+    // mechanism as the "Forgot password?" flow on index.html. This page does
+    // NOT set a password itself; it only requests the reset email.
+    const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanNxaWFuZWZ5a2JlYm5yZG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTk3MjIsImV4cCI6MjA4OTE3NTcyMn0.BhFsvgeCakxDeP0UQM38ryPtlppnapl2RgBqkq5HkEs';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById('request-form');
+    const emailInput = document.getElementById('email-input');
+    const subtitleText = document.getElementById('subtitle-text');
+    const errEl = document.getElementById('error-msg');
+    const successEl = document.getElementById('success-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Pre-fill from ?email=... so the buyer doesn't have to retype the address
+    // the onboarding email was already sent to. They can still edit it.
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillEmail = (urlParams.get('email') || '').trim();
+    if (prefillEmail) {
+      emailInput.value = prefillEmail;
+      subtitleText.textContent = `We'll send a link to ${prefillEmail} to set a password for future visits.`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim().toLowerCase();
+
+      errEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      if (!email) {
+        errEl.textContent = 'Enter your email address.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      emailInput.disabled = true;
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password.html'
+      });
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send me the link';
+      emailInput.disabled = false;
+
+      if (error) {
+        // Do not reveal whether the email exists in the system -- same
+        // posture as a standard "forgot password" flow. Show a generic
+        // failure only for genuine send errors (rate limit, network, etc).
+        errEl.textContent = 'Something went wrong sending that link. Please try again in a moment.';
+        errEl.style.display = 'block';
+        console.error('resetPasswordForEmail failed:', error);
+        return;
+      }
+
+      successEl.textContent = 'Check your email for a link to set your password.';
+      successEl.style.display = 'block';
+      form.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
