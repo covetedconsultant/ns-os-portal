@@ -368,13 +368,17 @@ function extractWeeklyPlan(text) {
   }
 }
 
-async function writeWeeklyPlan(reportData, userId) {
+async function writeWeeklyPlan(reportData, userId, clientName) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!userId || !uuidPattern.test(userId)) {
     throw new Error('Weekly Plan write rejected: user_id must be a valid UUID');
   }
   const payload = {
     user_id: userId,
+    // user_name and session_date are NOT NULL with no DB default (confirmed live 2026-07-02
+    // via a 23502 insert failure) -- writeWeeklyPlan previously omitted both entirely.
+    user_name: clientName || 'Client',
+    session_date: new Date().toISOString().slice(0, 10),
     quarter: reportData.quarter || null,
     week_number: typeof reportData.week_number === 'number' ? reportData.week_number : null,
     quarterly_focus_professional: reportData.quarterly_focus_professional || null,
@@ -1215,7 +1219,7 @@ exports.handler = async (event) => {
           reportType = 'weekly_plan';
         }
         try {
-          await writeWeeklyPlan(weeklyPlanData, userId);
+          await writeWeeklyPlan(weeklyPlanData, userId, userName);
           console.log('Weekly Plan row written for user:', userId);
         } catch (wpErr) {
           console.error('Weekly Plan write failed:', wpErr);
