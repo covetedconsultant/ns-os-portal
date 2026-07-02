@@ -875,6 +875,60 @@ exports.handler = async (event) => {
       // matching the same isolation pattern as Weekly Plan / Quarterly.
       systemPrompt += buildVTPlaybookOutputBlock(VT_BOX_LABELS[requestedBox] || requestedBox);
 
+      // (2026-07-02, Phase 3 proof-of-concept) vt-6 ONLY: route the real trigger phrase
+      // ("Create Box 6 Playbook") to the background-function path instead of the normal
+      // synchronous call below. Scoped to vt-6 alone for this first test — see
+      // HANDOFF-2026-07-02-vt-phase1-css-fix-and-phase3-evidence.md and the report_jobs
+      // table. Every other VT box (and vt-6 itself on any non-trigger message) proceeds
+      // through the existing synchronous path unchanged.
+      const lastUserMsgForTrigger = [...messages].reverse().find(m => m.role === 'user');
+      const isVt6RealTrigger = requestedBox === 'vt-6' &&
+        lastUserMsgForTrigger && typeof lastUserMsgForTrigger.content === 'string' &&
+        lastUserMsgForTrigger.content.trim().toLowerCase() === 'create box 6 playbook';
+
+      if (isVt6RealTrigger && userId) {
+        const jobPayload = {
+          systemPrompt,
+          messages: [
+            { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + buildContextString(context) + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
+            { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
+            ...messages.map(m => ({ role: m.role, content: m.content }))
+          ],
+          boxLabel: VT_BOX_LABELS[requestedBox] || requestedBox,
+          meta: { clientName: userName || 'Client' }
+        };
+
+        const createRes = await fetch(`${SUPABASE_URL}/rest/v1/report_jobs`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({ user_id: userId, box_id: requestedBox, room: 'virtualteam', request_payload: jobPayload })
+        });
+        const createdJob = (await createRes.json())?.[0];
+
+        if (createdJob && createdJob.id) {
+          // Fire the background function — do NOT await its completion, that's the whole point.
+          fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/.netlify/functions/generate-report-background`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId: createdJob.id })
+          }).catch(err => console.error('Failed to invoke background function:', err));
+
+          return {
+            statusCode: 200, headers: corsHeaders(),
+            body: JSON.stringify({
+              message: 'Your Box 6 — Deliver Leader playbook is being built. This usually takes about 30-60 seconds — feel free to check back.',
+              reportJobId: createdJob.id,
+              hasLogsToday: true
+            })
+          };
+        }
+        // If job creation failed for any reason, fall through to the normal synchronous path
+        // below rather than losing the request entirely.
+      }
+
       // VT close fires the same unified cs-receipt — carrying virtual_team context + box_built.
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
