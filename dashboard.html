@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-02-a-vt-report-polling -->
+  <!-- cache-bust: 2026-07-02-b-weekly-plan-poll-label-fix -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1935,7 +1935,7 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
     try {
       const { data, error } = await supabaseClient
         .from('report_jobs')
-        .select('status, result_html, result_title, error_message')
+        .select('status, result_html, result_title, error_message, box_id, room')
         .eq('id', jobId)
         .single();
       if (error) { console.error('VT report poll error:', error); continue; }
@@ -1944,13 +1944,24 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
 
     if (row.status === 'done' && row.result_html) {
       placeholderRow.remove();
-      appendMessage(messagesId, 'assistant', row.result_title ? 'Your playbook is ready — **' + row.result_title + '**' : 'Your playbook is ready.', 'virtualteam', row.result_html, 'vt_playbook');
+      // Report-kind-aware labeling (2026-07-02 fix): this poller now serves both VT
+      // playbooks (room='virtualteam') and Weekly Plan (room='prep', box_id='weekly_plan').
+      // Previously hardcoded 'virtualteam'/'vt_playbook' regardless of job kind, which
+      // would have mislabeled a completed Weekly Plan report as a Virtual Team Playbook.
+      const isWeeklyPlan = row.box_id === 'weekly_plan';
+      const chatIdForCard = isWeeklyPlan ? 'prep' : 'virtualteam';
+      const reportTypeForCard = isWeeklyPlan ? 'weekly_plan' : 'vt_playbook';
+      const readyLabel = isWeeklyPlan ? 'Your Weekly Plan is ready' : 'Your playbook is ready';
+      appendMessage(messagesId, 'assistant', row.result_title ? readyLabel + ' — **' + row.result_title + '**' : readyLabel + '.', chatIdForCard, row.result_html, reportTypeForCard);
       return;
     }
     if (row.status === 'error') {
       placeholderRow.remove();
-      appendMessage(messagesId, 'assistant', 'Something went wrong building your playbook. Please try again — if this keeps happening, let your Chief of Staff know.');
-      console.error('VT report job errored:', row.error_message);
+      const isWeeklyPlan = row.box_id === 'weekly_plan';
+      appendMessage(messagesId, 'assistant', isWeeklyPlan
+        ? 'Something went wrong building your Weekly Plan. Please try again — if this keeps happening, let your Chief of Staff know.'
+        : 'Something went wrong building your playbook. Please try again — if this keeps happening, let your Chief of Staff know.');
+      console.error('Report job errored:', row.error_message);
       return;
     }
     // status is 'pending' or 'processing' — keep waiting
@@ -1958,7 +1969,7 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
   // Timed out client-side — the job may still finish server-side (background functions
   // run up to 15 min), but stop polling this session and let the user know.
   placeholderRow.remove();
-  appendMessage(messagesId, 'assistant', 'This playbook is taking longer than usual to build. It may still finish in the background — feel free to check back in a minute, or ask again.');
+  appendMessage(messagesId, 'assistant', 'This is taking longer than usual to build. It may still finish in the background — feel free to check back in a minute, or ask again.');
 }
 
 function appendVtBuildingPlaceholder(messagesId) {
