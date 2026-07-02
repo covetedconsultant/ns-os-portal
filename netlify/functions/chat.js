@@ -1033,6 +1033,68 @@ exports.handler = async (event) => {
           }
         }
       }
+
+      // ── PREP ROOM BACKGROUND BUILD TRIGGER (cs-15, 2026-07-02) ────────────────
+      // Same pattern as the VT background trigger above. cs-15 v1.1 added an explicit
+      // "Build my weekly plan" gate between Mode 2 (Ask) and Mode 3 (Produce) specifically
+      // so this could exist -- Mode 3's report-assembly call was confirmed live to hit
+      // Netlify's ~30s sync ceiling under the old flow, where Produce began automatically
+      // the instant Mode 2 closed with no client-side pause to intercept.
+      if (prepRoute === 'cs-15' && userId) {
+        const lastUserMsgForPrepTrigger = [...messages].reverse().find(m => m.role === 'user');
+        const isWeeklyPlanRealTrigger = lastUserMsgForPrepTrigger &&
+          typeof lastUserMsgForPrepTrigger.content === 'string' &&
+          lastUserMsgForPrepTrigger.content.trim().toLowerCase() === 'build my weekly plan';
+
+        if (isWeeklyPlanRealTrigger) {
+          const jobPayload = {
+            systemPrompt,
+            messages: [
+              { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + buildContextString(context) + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
+              { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
+              ...messages.map(m => ({ role: m.role, content: m.content }))
+            ],
+            reportKind: 'weekly_plan',
+            meta: { clientName: userName || 'Client' }
+          };
+
+          const createRes = await fetch(`${SUPABASE_URL}/rest/v1/report_jobs`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+              'Content-Type': 'application/json', 'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ user_id: userId, box_id: 'weekly_plan', room: 'prep', request_payload: jobPayload })
+          });
+          const createdJob = (await createRes.json())?.[0];
+
+          if (createdJob && createdJob.id) {
+            try {
+              const invokeRes = await fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId: createdJob.id })
+              });
+              if (invokeRes.status !== 202) {
+                console.error('Background function invocation returned unexpected status:', invokeRes.status);
+              }
+            } catch (err) {
+              console.error('Failed to invoke background function:', err);
+            }
+
+            return {
+              statusCode: 200, headers: corsHeaders(),
+              body: JSON.stringify({
+                message: 'Your Weekly Plan is being built. This usually takes about 30-75 seconds — feel free to check back.',
+                reportJobId: createdJob.id,
+                hasLogsToday: true
+              })
+            };
+          }
+          // If job creation failed for any reason, fall through to the normal synchronous
+          // path below rather than losing the request entirely.
+        }
+      }
     } else {
       const hasOP = await hasOperatingPicture(userId);
       if (!hasOP) {
