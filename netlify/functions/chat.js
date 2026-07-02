@@ -73,6 +73,12 @@ const { handleVirtualTeamRoom } = require('./lib/virtual-team-room.js');
 // project_chat_js_restructuring_plan.md.
 const { handlePrepRoom } = require('./lib/prep-room.js');
 
+// Daily Brief (2026-07-02): route detector (detectDailyBriefRoute), cs9ShouldLoad,
+// and the entire room='chat' handler now live in
+// netlify/functions/lib/daily-brief-room.js. Loaded via require() below. See
+// project memory: project_chat_js_restructuring_plan.md.
+const { handleDailyBriefRoom } = require('./lib/daily-brief-room.js');
+
 // ── DAILY BRIEF ROOM ROUTING (added 2026-07-01) ─────────────────────────────
 // Detects the opening message and dispatches directly to CS-1 or CS-16 — no
 // base document (chat-b) loads underneath either path anymore. Mirrors the
@@ -90,30 +96,9 @@ const { handlePrepRoom } = require('./lib/prep-room.js');
 //     the correct default for an unmatched opening — CS-16 receives whatever
 //     the client arrives with, which is the safer fallback than CS-1's
 //     structured brief for a message that doesn't clearly ask for one)
-function detectDailyBriefRoute(messages) {
-  if (!messages || messages.length === 0) return 'cs-16';
-  const firstUserMsg = messages.find(m => m.role === 'user');
-  if (!firstUserMsg) return 'cs-16';
-  const text = firstUserMsg.content.toLowerCase().trim();
-
-  if (text.includes('upload') && (text.includes('document') || text.includes('file'))) {
-    return 'redirect-upload';
-  }
-  if (text.includes('quarterly review')) {
-    return 'redirect-quarterly';
-  }
-  if (text.includes('north star brief') || text.includes('morning brief') ||
-      text.includes('my brief') || text.includes('show me my') || text === 'b') {
-    return 'cs-1';
-  }
-  if (text.includes('talk something through') || text.includes('talk it through') ||
-      text.includes('talk something out') || text === 'a') {
-    return 'cs-16';
-  }
-  // Ambiguous opening — default to CS-16's accompanying mode, which is built
-  // to receive whatever the client arrives with rather than force a brief.
-  return 'cs-16';
-}
+// detectDailyBriefRoute and cs9ShouldLoad now live in
+// netlify/functions/lib/daily-brief-room.js (required in below). Extracted
+// 2026-07-02 — see project memory: project_chat_js_restructuring_plan.md.
 
 // Build the receipt close-protocol block appended to a room's system prompt when the user
 // signals close. Shared by room=chat (Daily Work) and room=virtualteam (a VT box session).
@@ -351,36 +336,6 @@ function normalizeTurns(turns) {
   return out;
 }
 
-function cs9ShouldLoad(messages) {
-  const assistantPresentedOffers = messages.some(msg =>
-    msg.role === 'assistant' &&
-    (
-      msg.content.includes('Here are three ways I can help') ||
-      msg.content.includes('three ways I can help right now') ||
-      msg.content.includes('How I Can Help Right Now') ||
-      msg.content.includes('Here are three places we could start')
-    )
-  );
-  if (!assistantPresentedOffers) return false;
-  const offerPresentedIdx = messages.findIndex(msg =>
-    msg.role === 'assistant' &&
-    (
-      msg.content.includes('Here are three ways I can help') ||
-      msg.content.includes('three ways I can help right now') ||
-      msg.content.includes('How I Can Help Right Now') ||
-      msg.content.includes('Here are three places we could start')
-    )
-  );
-  const afterOffers = messages.slice(offerPresentedIdx + 1);
-  const confirmSignals = ['1','2','3','4','a','b','c','d','option 1','option 2','option 3','yes',"let's do that",'that one','go with'];
-  for (const msg of afterOffers) {
-    if (msg.role !== 'user') continue;
-    const text = msg.content.toLowerCase().trim();
-    if (confirmSignals.some(s => text === s || text.startsWith(s + ' ') || text.startsWith(s + ','))) return true;
-  }
-  return false;
-}
-
 function csReceiptShouldLoad(messages) {
   const closeSignals = [
     "that's it",'that is it',"we're done",'we are done',
@@ -523,49 +478,16 @@ exports.handler = async (event) => {
     let prepRoute = null; // set below when room === 'prep'; used later for report-write dispatch
 
     if (room === 'chat') {
-      // Direct dispatch (2026-07-01) — replaces the prior "always load chat-b
-      // first, append on top" pattern. chat-b retired; see LOG-cs-16.
-      const dailyBriefRoute = detectDailyBriefRoute(messages);
-
-      if (dailyBriefRoute === 'redirect-upload') {
-        // Folded in from chat-b's former edge-case text — no protocol load needed,
-        // this is a short fixed redirect message.
-        return {
-          statusCode: 200, headers: corsHeaders(),
-          body: JSON.stringify({ reply: "Document uploads happen in the Upload Documents chat. Head there and it will walk you through the process." })
-        };
-      }
-      if (dailyBriefRoute === 'redirect-quarterly') {
-        return {
-          statusCode: 200, headers: corsHeaders(),
-          body: JSON.stringify({ reply: "Quarterly reviews have their own dedicated space — the Preparation Work chat. Head there when you're ready." })
-        };
-      }
-
-      if (dailyBriefRoute === 'cs-1') {
-        const cs1Prompt = await getPrompt('cs-1');
-        if (!cs1Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-1 prompt not found in Supabase' }) };
-        systemPrompt = cs1Prompt;
-      } else {
-        // dailyBriefRoute === 'cs-16' (Talk Something Through, or ambiguous-opening fallback)
-        const cs16Prompt = await getPrompt('cs-16');
-        if (!cs16Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-16 prompt not found in Supabase' }) };
-        systemPrompt = cs16Prompt;
-      }
-
-      if (cs9ShouldLoad(messages)) {
-        const cs9Prompt = await getPrompt('cs-9');
-        if (cs9Prompt) systemPrompt += '\n\n---\n\n## CS-9 — RECOMMENDATIONS RESPONSE PROTOCOL\n\n' + cs9Prompt;
-      }
-      if (csReceiptShouldLoad(messages)) {
-        const csReceiptPrompt = await getPrompt('cs-receipt');
-        if (csReceiptPrompt) {
-          systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, {
-            triggerContext: 'daily_work',
-            roomsVisited: 'Daily Work — Chief of Staff'
-          });
-        }
-      }
+      // Full room='chat' (Daily Brief) handling now lives in
+      // netlify/functions/lib/daily-brief-room.js. Same behavior as the prior
+      // inline block — route detection, CS-9 overlay, and the receipt close
+      // block. Extracted 2026-07-02.
+      const dailyBriefResult = await handleDailyBriefRoom(
+        { messages },
+        { getPrompt, buildReceiptCloseBlock, csReceiptShouldLoad, corsHeaders }
+      );
+      if (dailyBriefResult.response) return dailyBriefResult.response;
+      systemPrompt = dailyBriefResult.systemPrompt;
 
     } else if (room === 'virtualteam') {
       // Full room='virtualteam' handling now lives in
