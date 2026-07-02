@@ -909,12 +909,27 @@ exports.handler = async (event) => {
         const createdJob = (await createRes.json())?.[0];
 
         if (createdJob && createdJob.id) {
-          // Fire the background function — do NOT await its completion, that's the whole point.
-          fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId: createdJob.id })
-          }).catch(err => console.error('Failed to invoke background function:', err));
+          // Fix (2026-07-02, 2nd pass): AWAIT the invocation handshake (the 202 ack Netlify
+          // returns immediately per their own docs -- "the client receives an empty 202
+          // response immediately"), NOT the background job's completion. A fire-and-forget
+          // fetch() with no await was silently failing to actually leave the sandbox before
+          // this parent (non-background) function returned its own response and Netlify tore
+          // down its execution environment -- a known invoke-after-response serverless gotcha.
+          // Awaiting just the 202 handshake costs a few hundred ms, confirmed negligible against
+          // Netlify's docs description of an "immediate" 202, and guarantees the invocation
+          // actually fires before this function exits.
+          try {
+            const invokeRes = await fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: createdJob.id })
+            });
+            if (invokeRes.status !== 202) {
+              console.error('Background function invocation returned unexpected status:', invokeRes.status);
+            }
+          } catch (err) {
+            console.error('Failed to invoke background function:', err);
+          }
 
           return {
             statusCode: 200, headers: corsHeaders(),
