@@ -179,20 +179,63 @@ function buildQuarterlyOutputBlock(reviewType) {
 }
 
 function buildVTPlaybookOutputBlock(boxLabel) {
-  return '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED (VIRTUAL TEAM PLAYBOOK RENDERING)\n\n' +
+  return '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED (VIRTUAL TEAM PLAYBOOK CONTENT)\n\n' +
     'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). Ignore any instruction above ' +
-    'that says to "deliver the playbook as a response in the chat thread so it renders" — in THIS environment, raw HTML ' +
-    'dropped directly into your visible response does NOT render. It will show up as literal escaped tag text, which is broken. ' +
-    'Instead, once the playbook HTML is fully built to the master design standard, do this: first output one short line to the ' +
-    'client confirming the playbook is ready (e.g. "Your ' + boxLabel + ' playbook is ready below."), then append this block ' +
-    'after that line — the block itself is NEVER shown to the client:\n\n' +
+    'that says to "deliver the playbook as a response in the chat thread so it renders" or that describes rendering ' +
+    'a full styled HTML document yourself — in THIS environment, chat.js applies the master design standard\'s styling ' +
+    'MECHANICALLY, after you respond. You do NOT generate <style>, <html>, <head>, or <body> tags, and you do NOT need ' +
+    'to reproduce the design standard\'s CSS or header/footer lines — chat.js adds all of that automatically from a ' +
+    'fixed template. Your ONLY job is the CONTENT: the section headings, body text, tables, lists, and blockquotes for ' +
+    'this playbook, using plain semantic HTML tags (<h2>, <h3>, <h4>, <p>, <table>, <ul>, <ol>, <blockquote> — per ' +
+    'Section 5 of the design standard\'s element rules) with NO styling attributes and NO wrapper document.\n\n' +
+    'Once the playbook content is fully written, do this: first output one short line to the client confirming the ' +
+    'playbook is ready (e.g. "Your ' + boxLabel + ' playbook is ready below."), then append this block after that ' +
+    'line — the block itself is NEVER shown to the client:\n\n' +
     '%%VT_PLAYBOOK%%\nTITLE: [use this box\'s exact title format, e.g. CC-BOX02-YYYY-MM-DD-ClientLastName-Client-Avatar-Profile]\n' +
-    '[the complete rendered playbook HTML, exactly as built to the master design standard — NOT escaped, NOT truncated, ' +
-    'the full document from opening tag to closing tag]\n%%END_VT_PLAYBOOK%%\n\n' +
-    'RULES:\n- Do NOT paste or repeat the playbook HTML anywhere in your visible response outside this block — the block is the ONLY place it should appear.\n' +
-    '- The HTML inside the block must be complete and unabridged — do not summarize, truncate, or cut it short for length. If the full playbook cannot fit, prioritize finishing the HTML over adding extra visible commentary before or after it.\n' +
-    '- Do NOT claim you have "rendered", "displayed", or "shown" the playbook yourself in your visible text — the portal renders it from this block after you respond.\n' +
+    '[the playbook CONTENT ONLY — semantic HTML tags for headings/paragraphs/tables/lists/blockquotes, starting directly ' +
+    'with the first section heading, NO <style>, NO <html>/<head>/<body> tags, NO header or footer line — chat.js adds ' +
+    'those]\n%%END_VT_PLAYBOOK%%\n\n' +
+    'RULES:\n- Do NOT paste or repeat the playbook content anywhere in your visible response outside this block — the block is the ONLY place it should appear.\n' +
+    '- Do NOT include <style>, <html>, <head>, <body>, or any header/footer "[Client] | [Firm] | [Date]" line inside the block — chat.js adds these mechanically. Including them will cause duplication.\n' +
+    '- The content inside the block must be complete and unabridged — do not summarize, truncate, or cut it short for length.\n' +
+    '- Do NOT claim you have "rendered", "displayed", or "shown" the playbook yourself in your visible text — the portal builds and renders it from this block after you respond.\n' +
     '- If this block is missing, malformed, or missing its closing %%END_VT_PLAYBOOK%% tag, the playbook will not display for the client at all.';
+}
+
+// ── VT PLAYBOOK TEMPLATE WRAP (2026-07-02, Phase 1 CSS-injection fix) ────────────
+// General, reusable mechanism: takes marker-extracted content (from ANY box's
+// %%VT_PLAYBOOK%% output) and mechanically wraps it in REF-pdf-html-standard's
+// actual template, fetched live from Supabase — never hardcoded/retyped. Same
+// pattern is intended to extend to Weekly Plan / Quarterly in Phase 2 (their own
+// wrap calls, not built here yet — Phase 1 scope is VT only per the handoff).
+// Extracts just the <style>...</style> block from REF-pdf-html-standard (the doc
+// itself is prose + one illustrative example, not a machine-splicable shell) and
+// builds a fixed header/footer per the standard's own Section 7 rule.
+async function wrapVTPlaybookInTemplate(contentHtml, title, meta) {
+  const m = meta || {};
+  const clientName = m.clientName || 'Client';
+  const firmName = m.firmName || 'Coveted Consultant';
+  const dateStr = m.dateStr || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const displayTitle = title || 'Virtual Team Playbook';
+
+  let styleBlock = '';
+  try {
+    const refDoc = await getPrompt('REF-pdf-html-standard');
+    if (refDoc) {
+      const styleMatch = refDoc.match(/<style>[\s\S]*?<\/style>/);
+      if (styleMatch) styleBlock = styleMatch[0];
+    }
+  } catch (err) {
+    console.error('wrapVTPlaybookInTemplate: REF-pdf-html-standard fetch/parse failed:', err);
+  }
+
+  // Fail soft: if the style block couldn't be fetched/parsed for any reason,
+  // still return the content wrapped in a minimal shell rather than losing the
+  // report entirely. The client gets an unstyled-but-complete document, not an error.
+  const footerLine = '<p><em>' + clientName + ' | ' + firmName + ' | ' + dateStr + '</em></p>';
+  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n' + styleBlock +
+    '\n</head>\n<body>\n' + footerLine + '\n<h1>' + displayTitle + '</h1>\n<hr>\n' +
+    contentHtml + '\n<hr>\n' + footerLine + '\n</body>\n</html>';
 }
 
 // ── ERR-NET-25 fix (2026-07-01): verify the caller's Supabase access token ────
@@ -820,10 +863,10 @@ exports.handler = async (event) => {
       if (!vtPrompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: requestedBox + ' prompt not found in Supabase' }) };
       systemPrompt = vtPrompt;
 
-      // Every VT box renders its playbook HTML to the shared master design standard.
-      // Load it once from Supabase and append so the box always has it in context.
-      const designStandard = await getPrompt('REF-pdf-html-standard');
-      if (designStandard) systemPrompt += '\n\n---\n\n## NS-OS-PDF-HTML-STANDARD — MASTER DESIGN STANDARD (render all playbook HTML to this)\n\n' + designStandard;
+      // (2026-07-02, Phase 1 fix) REF-pdf-html-standard is no longer appended here —
+      // the model no longer generates styled HTML itself, so it doesn't need to see the
+      // design standard at generation time. wrapVTPlaybookInTemplate() fetches it fresh
+      // at response-assembly time instead, after the model returns content-only output.
 
       // %%VT_PLAYBOOK%% marker override (2026-07-01): raw HTML delivered directly into
       // the chat thread does NOT render on the custom portal — renderMarkdown() escapes
@@ -966,18 +1009,22 @@ exports.handler = async (event) => {
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        // max_tokens raised 2048 -> 10000 (2026-07-01): the old 2048 ceiling was shared
-        // across every room with no override. Confirmed root cause of VT playbook
-        // truncation via live test (Box 2 cut off mid-CSS, never reached
-        // %%END_VT_PLAYBOOK%%) and via production data: a working quarterly_reviews
-        // row was already 18,807 chars (~4,701 tokens) -- over DOUBLE the old budget on
-        // its own -- sitting next to a 109-char row that looks like a silent truncation
-        // of the same kind. The VT master design standard's CSS alone is ~11,322 chars
-        // (~2,830 tokens) before any playbook content is written. 10000 gives real
-        // headroom above the largest confirmed real-world need (~7,500 tokens estimated
-        // for a full VT playbook: CSS overhead + content comparable to a working
-        // quarterly report), not just a doubling of the old number.
-        max_tokens: 2048,
+        // max_tokens: 4096 (2026-07-02, Phase 1 fix). Real Netlify function logs (not
+        // available on 07-01, obtained 07-02) showed the true sync ceiling is ~30s
+        // (504 Gateway Timeout at 30199ms), not the ~10s assumed on 07-01 -- explaining
+        // why both prior guesses (10000, then 5000) failed identically with a generic
+        // Connection error: the actual blocker was CSS generation TIME, not the token
+        // BUDGET. Root fix (this commit): VT playbooks no longer generate CSS/full-HTML
+        // at all -- buildVTPlaybookOutputBlock() now asks for content-only, and
+        // wrapVTPlaybookInTemplate() applies REF-pdf-html-standard's styling mechanically
+        // after the model responds, at zero LLM-token cost. Evidence for 4096: the
+        // <style> block alone was 3,511 chars (~878 tokens) of the old per-turn cost,
+        // now removed entirely; a working quarterly_reviews row (full styled HTML incl.
+        // its own CSS) was 18,807 chars (~4,701 tokens) -- with CSS removed, real
+        // content-only VT playbook length should land well under half that. 4096 gives
+        // ~2x headroom above that content-only estimate while finishing generation far
+        // faster than either failed CSS-inclusive attempt.
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [
           { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
@@ -1057,7 +1104,20 @@ exports.handler = async (event) => {
     if (message.includes('%%VT_PLAYBOOK%%') && message.includes('%%END_VT_PLAYBOOK%%')) {
       const vtPlaybookData = extractVTPlaybook(message);
       if (vtPlaybookData && vtPlaybookData.html) {
-        reportHtml = vtPlaybookData.html;
+        // (2026-07-02, Phase 1 fix) Model now returns CONTENT ONLY (no CSS/wrapper) —
+        // wrap it in REF-pdf-html-standard's actual template here, mechanically, using
+        // context already available on this request (client/firm/date), same general
+        // mechanism intended to extend to Weekly Plan / Quarterly in Phase 2.
+        try {
+          reportHtml = await wrapVTPlaybookInTemplate(vtPlaybookData.html, vtPlaybookData.title, {
+            clientName: (userName || 'Client'),
+            firmName: 'Coveted Consultant',
+            dateStr: new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })
+          });
+        } catch (wrapErr) {
+          console.error('wrapVTPlaybookInTemplate failed, falling back to unwrapped content:', wrapErr);
+          reportHtml = vtPlaybookData.html;
+        }
         reportType = 'vt_playbook';
       } else {
         console.error('VT_PLAYBOOK marker present but extraction failed or produced empty HTML');
