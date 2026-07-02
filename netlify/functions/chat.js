@@ -178,6 +178,23 @@ function buildQuarterlyOutputBlock(reviewType) {
     '- If this block is missing or malformed, the report is NOT saved and will not appear in Meeting Receipts or be downloadable as a PDF next time.';
 }
 
+function buildVTPlaybookOutputBlock(boxLabel) {
+  return '\n\n---\n\n## CUSTOM BUILD OUTPUT OVERRIDE — REQUIRED (VIRTUAL TEAM PLAYBOOK RENDERING)\n\n' +
+    'You are running inside the custom portal (sprightly-starburst-210796.netlify.app). Ignore any instruction above ' +
+    'that says to "deliver the playbook as a response in the chat thread so it renders" — in THIS environment, raw HTML ' +
+    'dropped directly into your visible response does NOT render. It will show up as literal escaped tag text, which is broken. ' +
+    'Instead, once the playbook HTML is fully built to the master design standard, do this: first output one short line to the ' +
+    'client confirming the playbook is ready (e.g. "Your ' + boxLabel + ' playbook is ready below."), then append this block ' +
+    'after that line — the block itself is NEVER shown to the client:\n\n' +
+    '%%VT_PLAYBOOK%%\nTITLE: [use this box\'s exact title format, e.g. CC-BOX02-YYYY-MM-DD-ClientLastName-Client-Avatar-Profile]\n' +
+    '[the complete rendered playbook HTML, exactly as built to the master design standard — NOT escaped, NOT truncated, ' +
+    'the full document from opening tag to closing tag]\n%%END_VT_PLAYBOOK%%\n\n' +
+    'RULES:\n- Do NOT paste or repeat the playbook HTML anywhere in your visible response outside this block — the block is the ONLY place it should appear.\n' +
+    '- The HTML inside the block must be complete and unabridged — do not summarize, truncate, or cut it short for length. If the full playbook cannot fit, prioritize finishing the HTML over adding extra visible commentary before or after it.\n' +
+    '- Do NOT claim you have "rendered", "displayed", or "shown" the playbook yourself in your visible text — the portal renders it from this block after you respond.\n' +
+    '- If this block is missing, malformed, or missing its closing %%END_VT_PLAYBOOK%% tag, the playbook will not display for the client at all.';
+}
+
 // ── ERR-NET-25 fix (2026-07-01): verify the caller's Supabase access token ────
 // actually belongs to the userId the request claims. Before this fix, chat.js
 // trusted whatever userId the frontend sent in the JSON body with no check that
@@ -365,6 +382,28 @@ function extractQuarterly(text) {
     console.error('QUARTERLY JSON parse failed:', e, 'Raw:', jsonStr);
     return null;
   }
+}
+
+function extractVTPlaybook(text) {
+  // VT playbooks have no dedicated Supabase table (no schema to parse into) —
+  // the marker just delimits the raw playbook HTML plus an optional title line.
+  // Format emitted by vt-* prompts:
+  //   %%VT_PLAYBOOK%%
+  //   TITLE: CC-BOX02-2026-07-01-Mendes-Client-Avatar-Profile
+  //   <html>...full styled playbook...</html>
+  //   %%END_VT_PLAYBOOK%%
+  const start = text.indexOf('%%VT_PLAYBOOK%%');
+  const end = text.indexOf('%%END_VT_PLAYBOOK%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+  let block = text.slice(start + '%%VT_PLAYBOOK%%'.length, end).trim();
+  let title = null;
+  const titleMatch = block.match(/^TITLE:\s*(.+)$/m);
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+    block = block.replace(/^TITLE:\s*.+\n?/m, '').trim();
+  }
+  if (!block) return null;
+  return { html: block, title };
 }
 
 async function writeQuarterlyReview(reviewData, userId) {
@@ -786,6 +825,13 @@ exports.handler = async (event) => {
       const designStandard = await getPrompt('REF-pdf-html-standard');
       if (designStandard) systemPrompt += '\n\n---\n\n## NS-OS-PDF-HTML-STANDARD — MASTER DESIGN STANDARD (render all playbook HTML to this)\n\n' + designStandard;
 
+      // %%VT_PLAYBOOK%% marker override (2026-07-01): raw HTML delivered directly into
+      // the chat thread does NOT render on the custom portal — renderMarkdown() escapes
+      // all HTML before display. This block overrides each box's "deliver in chat thread"
+      // instruction so the model emits the finished playbook wrapped in the marker instead,
+      // matching the same isolation pattern as Weekly Plan / Quarterly.
+      systemPrompt += buildVTPlaybookOutputBlock(VT_BOX_LABELS[requestedBox] || requestedBox);
+
       // VT close fires the same unified cs-receipt — carrying virtual_team context + box_built.
       if (csReceiptShouldLoad(messages)) {
         const csReceiptPrompt = await getPrompt('cs-receipt');
@@ -992,6 +1038,21 @@ exports.handler = async (event) => {
       }
     }
 
+    // ── VIRTUAL TEAM PLAYBOOK passthrough (2026-07-01) ──────────────────────
+    // No Supabase write — VT playbooks have no dedicated persistence table (their only
+    // durable trace is the CS-Receipt, already wired). This just isolates the HTML out
+    // of the marker so it never hits renderMarkdown() as raw escaped text, and hands it
+    // to the frontend the same way Weekly Plan / Quarterly reports are handed off.
+    if (message.includes('%%VT_PLAYBOOK%%') && message.includes('%%END_VT_PLAYBOOK%%')) {
+      const vtPlaybookData = extractVTPlaybook(message);
+      if (vtPlaybookData && vtPlaybookData.html) {
+        reportHtml = vtPlaybookData.html;
+        reportType = 'vt_playbook';
+      } else {
+        console.error('VT_PLAYBOOK marker present but extraction failed or produced empty HTML');
+      }
+    }
+
     // ── WRITE ASSISTANT MESSAGE AFTER ANTHROPIC RESPONSE ────────────────────────
     if (sessionKey && lastUserMsg) {
       const cleanMessage = message
@@ -999,6 +1060,7 @@ exports.handler = async (event) => {
         .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
         .replace(/%%WEEKLY_PLAN%%[\s\S]*?%%END_WEEKLY_PLAN%%/g, '')
         .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
+        .replace(/%%VT_PLAYBOOK%%[\s\S]*?%%END_VT_PLAYBOOK%%/g, '')
         .replace(/\[NORTH_STAR_COMPLETE\]/g, '')
         .trim();
       writeAssistantMessageLog(userId, room || 'unknown', cleanMessage, sessionKey).catch(err => {
@@ -1012,6 +1074,7 @@ exports.handler = async (event) => {
     const cleanForClient = message
       .replace(/%%WEEKLY_PLAN%%[\s\S]*?%%END_WEEKLY_PLAN%%/g, '')
       .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
+      .replace(/%%VT_PLAYBOOK%%[\s\S]*?%%END_VT_PLAYBOOK%%/g, '')
       .trim();
 
     const responseBody = { message: cleanForClient, hasLogsToday: !!sessionKey };
