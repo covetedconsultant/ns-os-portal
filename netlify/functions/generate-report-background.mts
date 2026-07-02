@@ -186,7 +186,13 @@ export default async (req: Request) => {
       headers: { 'x-api-key': ANTHROPIC_API_KEY as string, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 4096,
+        // max_tokens raised 4096 -> 8192 (2026-07-02): confirmed live that a real Weekly
+        // Plan build (cs-15) hit the 4096 cap mid-generation (output_tokens: 4096 exactly,
+        // %%WEEKLY_PLAN%% JSON truncated before its closing marker, raw length 12,922 chars).
+        // Weekly Plan's report is JSON-wrapped HTML (full_report field) which is naturally
+        // larger than a VT playbook's plain HTML block -- 8192 gives real headroom above the
+        // one measured real-world case without guessing at an arbitrary multiple.
+        max_tokens: 8192,
         system: systemPrompt,
         messages
       })
