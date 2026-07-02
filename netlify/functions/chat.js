@@ -875,18 +875,24 @@ exports.handler = async (event) => {
       // matching the same isolation pattern as Weekly Plan / Quarterly.
       systemPrompt += buildVTPlaybookOutputBlock(VT_BOX_LABELS[requestedBox] || requestedBox);
 
-      // (2026-07-02, Phase 3 proof-of-concept) vt-6 ONLY: route the real trigger phrase
-      // ("Create Box 6 Playbook") to the background-function path instead of the normal
-      // synchronous call below. Scoped to vt-6 alone for this first test — see
-      // HANDOFF-2026-07-02-vt-phase1-css-fix-and-phase3-evidence.md and the report_jobs
-      // table. Every other VT box (and vt-6 itself on any non-trigger message) proceeds
-      // through the existing synchronous path unchanged.
+      // (2026-07-02, Phase 3 proof-of-concept) TIMING-SWEEP EXPANSION: vt-6, vt-2a, vt-10
+      // route their real trigger phrases to the background-function path instead of the
+      // normal synchronous call below. Scoped to these three boxes only, for real-timing
+      // data collection across the size range (smallest/mid/largest of the 9 report-producing
+      // VT boxes) — see HANDOFF-2026-07-02-vt-phase1-css-fix-and-phase3-evidence.md and the
+      // report_jobs table. Every other VT box (and these three on any non-trigger message)
+      // proceeds through the existing synchronous path unchanged.
+      const VT_BACKGROUND_TRIGGER_PHRASES = {
+        'vt-6': 'create box 6 playbook',
+        'vt-2a': 'create box 2 playbook',
+        'vt-10': 'create box 10 playbook'
+      };
       const lastUserMsgForTrigger = [...messages].reverse().find(m => m.role === 'user');
-      const isVt6RealTrigger = requestedBox === 'vt-6' &&
+      const isVtBackgroundRealTrigger = VT_BACKGROUND_TRIGGER_PHRASES[requestedBox] &&
         lastUserMsgForTrigger && typeof lastUserMsgForTrigger.content === 'string' &&
-        lastUserMsgForTrigger.content.trim().toLowerCase() === 'create box 6 playbook';
+        lastUserMsgForTrigger.content.trim().toLowerCase() === VT_BACKGROUND_TRIGGER_PHRASES[requestedBox];
 
-      if (isVt6RealTrigger && userId) {
+      if (isVtBackgroundRealTrigger && userId) {
         const jobPayload = {
           systemPrompt,
           messages: [
@@ -934,7 +940,7 @@ exports.handler = async (event) => {
           return {
             statusCode: 200, headers: corsHeaders(),
             body: JSON.stringify({
-              message: 'Your Box 6 — Deliver Leader playbook is being built. This usually takes about 30-60 seconds — feel free to check back.',
+              message: 'Your ' + (VT_BOX_LABELS[requestedBox] || requestedBox) + ' playbook is being built. This usually takes about 30-75 seconds — feel free to check back.',
               reportJobId: createdJob.id,
               hasLogsToday: true
             })
