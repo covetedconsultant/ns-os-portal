@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-01-i-merged-auth-restore -->
+  <!-- cache-bust: 2026-07-02-a-vt-report-polling -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1855,6 +1855,14 @@ async function sendMessage(chatId) {
     appendMessage(messagesId, 'assistant', displayText, chatId, data.reportHtml || null, data.reportType || null);
     chatHistories[chatId].push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
+    // reportJobId (Phase 3, 2026-07-02): VT background build kicked off server-side
+    // (see chat.js VT_BACKGROUND_TRIGGER_PHRASES + generate-report-background.mts).
+    // The message above is the "building..." confirmation text — now poll for the
+    // real result and swap it in when ready, without blocking the chat UI.
+    if (data.reportJobId) {
+      const placeholderRow = appendVtBuildingPlaceholder(messagesId);
+      pollVtReportJob(messagesId, data.reportJobId, placeholderRow);
+    }
     // Save session snapshot to history after first exchange
     if (isFirstUserMsg) saveSessionToHistory(chatId, text, displayText);
   } catch (err) { typingEl.remove(); appendMessage(messagesId, 'assistant', 'Connection error. Please try again.'); console.error(err); }
@@ -1903,8 +1911,66 @@ const ICON_CHECK = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/>
 const REPORT_TYPE_LABELS = {
   weekly_plan: 'Weekly Plan',
   look_backward: 'Quarterly Review — Look Backward',
-  look_forward: 'Quarterly Review — Look Forward'
+  look_forward: 'Quarterly Review — Look Forward',
+  vt_playbook: 'Virtual Team Playbook'
 };
+
+// ── VT BACKGROUND REPORT POLLING (Phase 3, 2026-07-02) ──────────────────
+// When chat.js's virtualteam branch hands a build off to the background function
+// (see generate-report-background.mts), the immediate /api/chat response carries
+// reportJobId instead of the finished report. This polls report_jobs directly via
+// the existing client-side Supabase connection (RLS is not enabled on this project
+// yet — see CLAUDE.md — so a plain SELECT by id is the same access level as every
+// other client-side read already in this file) until the job reaches done/error,
+// then swaps the "building..." placeholder bubble for a real report card using the
+// same buildReportCard() component Weekly Plan/Quarterly already use.
+const VT_POLL_INTERVAL_MS = 4000;
+const VT_POLL_TIMEOUT_MS = 120000; // give up after 2 min — generation has run 30-76s in testing
+
+async function pollVtReportJob(messagesId, jobId, placeholderRow) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < VT_POLL_TIMEOUT_MS) {
+    await new Promise(r => setTimeout(r, VT_POLL_INTERVAL_MS));
+    let row;
+    try {
+      const { data, error } = await supabaseClient
+        .from('report_jobs')
+        .select('status, result_html, result_title, error_message')
+        .eq('id', jobId)
+        .single();
+      if (error) { console.error('VT report poll error:', error); continue; }
+      row = data;
+    } catch (err) { console.error('VT report poll fetch failed:', err); continue; }
+
+    if (row.status === 'done' && row.result_html) {
+      placeholderRow.remove();
+      appendMessage(messagesId, 'assistant', row.result_title ? 'Your playbook is ready — **' + row.result_title + '**' : 'Your playbook is ready.', 'virtualteam', row.result_html, 'vt_playbook');
+      return;
+    }
+    if (row.status === 'error') {
+      placeholderRow.remove();
+      appendMessage(messagesId, 'assistant', 'Something went wrong building your playbook. Please try again — if this keeps happening, let your Chief of Staff know.');
+      console.error('VT report job errored:', row.error_message);
+      return;
+    }
+    // status is 'pending' or 'processing' — keep waiting
+  }
+  // Timed out client-side — the job may still finish server-side (background functions
+  // run up to 15 min), but stop polling this session and let the user know.
+  placeholderRow.remove();
+  appendMessage(messagesId, 'assistant', 'This playbook is taking longer than usual to build. It may still finish in the background — feel free to check back in a minute, or ask again.');
+}
+
+function appendVtBuildingPlaceholder(messagesId) {
+  const msgs = document.getElementById(messagesId);
+  const row = document.createElement('div'); row.className = 'msg-row';
+  const div = document.createElement('div'); div.className = 'msg assistant';
+  const bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+  bubble.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  div.appendChild(bubble);
+  row.appendChild(div); msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
+  return row;
+}
 
 // Shared PDF generation — used by both the in-card toolbar button (buildReportCard,
 // live chat + expanded report rows) and the collapsed Reports-table row button
