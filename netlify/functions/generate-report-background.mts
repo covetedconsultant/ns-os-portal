@@ -107,6 +107,124 @@ async function writeWeeklyPlan(reportData: any, userId: string, clientName: stri
   return await res.json();
 }
 
+// ── QUARTERLY REVIEW (cs-13/cs-14, 2026-07-02) ─────────────────────────────
+// Mirrors chat.js's extractQuarterly()/writeQuarterlyReview() exactly, kept in sync
+// manually (same real maintenance cost flagged at the top of this file). Same fix
+// pattern as Weekly Plan -- cs-13/cs-14 v4.1 each added a trigger phrase gate for the
+// identical reason cs-15 needed one.
+function extractQuarterly(text: string) {
+  const start = text.indexOf('%%QUARTERLY%%');
+  const end = text.indexOf('%%END_QUARTERLY%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+  const jsonStr = text.slice(start + '%%QUARTERLY%%'.length, end).trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('QUARTERLY JSON parse failed:', e, 'Raw:', jsonStr);
+    return null;
+  }
+}
+
+async function writeQuarterlyReview(reviewData: any, userId: string, clientName: string) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) {
+    throw new Error('Quarterly review write rejected: user_id must be a valid UUID');
+  }
+  if (reviewData.type !== 'look_backward' && reviewData.type !== 'look_forward') {
+    throw new Error('Quarterly review write rejected: type must be look_backward or look_forward');
+  }
+
+  const reviewPayload = {
+    user_id: userId,
+    quarter: reviewData.quarter || null,
+    type: reviewData.type,
+    client_html: reviewData.client_html || null,
+    coach_pov: reviewData.coach_pov || null,
+    personal_grade: reviewData.personal_grade || null,
+    professional_grade: reviewData.professional_grade || null,
+    personal_explanation: reviewData.personal_explanation || null,
+    professional_explanation: reviewData.professional_explanation || null,
+    gold_expression: reviewData.gold_expression || null,
+    hardest_box: reviewData.hardest_box || null,
+    unfinished_thing: reviewData.unfinished_thing || null,
+    credit_attribution: reviewData.credit_attribution || null,
+    defining_moment: reviewData.defining_moment || null,
+    improvement_ask: reviewData.improvement_ask || null,
+    created_at: new Date().toISOString()
+  };
+  const reviewRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_reviews`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_SERVICE_KEY as string,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(reviewPayload)
+  });
+  if (!reviewRes.ok) throw new Error('quarterly_reviews INSERT failed: ' + await reviewRes.text());
+  const insertedReview = await reviewRes.json();
+
+  // Only touch quarterly_dashboard_content if the session actually locked fields for it.
+  const updates = reviewData.quarterly_dashboard_updates;
+  if (updates && typeof updates === 'object' && Object.keys(updates).length > 0) {
+    const allowedFields = [
+      'quarterly_focus_personal','quarterly_focus_professional',
+      'quarterly_focus_personal_goal','quarterly_focus_professional_goal',
+      'personal_task','professional_task','personal_task_why','professional_task_why',
+      'personal_metric','professional_metric',
+      'personal_watch_out_limit','professional_watch_out_limit',
+      'look_backward_summary'
+    ];
+    const patchBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined && updates[key] !== null && updates[key] !== '') {
+        patchBody[key] = updates[key];
+      }
+    }
+    if (Object.keys(patchBody).length > 0) {
+      patchBody.updated_at = new Date().toISOString();
+      const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}&select=id&limit=1`, {
+        headers: { 'apikey': SUPABASE_SERVICE_KEY as string, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+      });
+      const existing = await checkRes.json();
+      if (existing && existing.length > 0) {
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY as string,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(patchBody)
+        });
+        if (!patchRes.ok) console.error('quarterly_dashboard_content PATCH failed:', await patchRes.text());
+      } else {
+        patchBody.user_id = userId;
+        patchBody.quarter = reviewData.quarter || null;
+        // user_name is NOT NULL with no default (confirmed live 2026-07-02 via schema check,
+        // same class of gap as the writeWeeklyPlan fix earlier this session).
+        patchBody.user_name = clientName || 'Client';
+        patchBody.created_at = new Date().toISOString();
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY as string,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(patchBody)
+        });
+        if (!insertRes.ok) console.error('quarterly_dashboard_content INSERT failed:', await insertRes.text());
+      }
+    }
+  }
+
+  return insertedReview;
+}
+
 function extractVTPlaybook(text: string) {
   const start = text.indexOf('%%VT_PLAYBOOK%%');
   const end = text.indexOf('%%END_VT_PLAYBOOK%%');
@@ -234,6 +352,31 @@ export default async (req: Request) => {
         status: 'done',
         result_html: weeklyPlanData.full_report || null,
         result_title: 'Weekly Plan — Week ' + (weeklyPlanData.week_number ?? '?'),
+        completed_at: new Date().toISOString(),
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        generation_ms: elapsedMs
+      });
+      return;
+    }
+
+    if (reportKind === 'quarterly_review') {
+      const quarterlyData = extractQuarterly(message);
+      if (!quarterlyData) {
+        await updateJob(jobId, { status: 'error', error_message: 'No %%QUARTERLY%% block found or JSON parse failed. Raw length: ' + message.length, input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
+        return;
+      }
+      try {
+        await writeQuarterlyReview(quarterlyData, job.user_id, meta?.clientName);
+      } catch (writeErr) {
+        await updateJob(jobId, { status: 'error', error_message: 'quarterly_reviews write failed: ' + String(writeErr).slice(0, 400), input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
+        return;
+      }
+      const reviewTypeLabel = quarterlyData.type === 'look_forward' ? 'Look Forward' : 'Look Backward';
+      await updateJob(jobId, {
+        status: 'done',
+        result_html: quarterlyData.client_html || null,
+        result_title: reviewTypeLabel + ' — ' + (quarterlyData.quarter ?? ''),
         completed_at: new Date().toISOString(),
         input_tokens: inputTokens,
         output_tokens: outputTokens,
