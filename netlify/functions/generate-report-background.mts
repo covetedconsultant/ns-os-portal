@@ -146,11 +146,13 @@ export default async (req: Request) => {
     const data = await response.json();
     const elapsedMs = Date.now() - t0;
     const message = data.content?.[0]?.text || '';
-    console.log('generate-report-background: job', jobId, 'AI generation took', elapsedMs, 'ms');
+    const inputTokens = data.usage?.input_tokens ?? null;
+    const outputTokens = data.usage?.output_tokens ?? null;
+    console.log('generate-report-background: job', jobId, 'AI generation took', elapsedMs, 'ms, input_tokens', inputTokens, 'output_tokens', outputTokens);
 
     const extracted = extractVTPlaybook(message);
     if (!extracted) {
-      await updateJob(jobId, { status: 'error', error_message: 'No %%VT_PLAYBOOK%% block found in model output. Raw length: ' + message.length });
+      await updateJob(jobId, { status: 'error', error_message: 'No %%VT_PLAYBOOK%% block found in model output. Raw length: ' + message.length, input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
       return;
     }
 
@@ -160,7 +162,10 @@ export default async (req: Request) => {
       status: 'done',
       result_html: wrappedHtml,
       result_title: extracted.title,
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      generation_ms: elapsedMs
     });
 
   } catch (err: any) {
