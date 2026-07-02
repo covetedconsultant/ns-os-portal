@@ -453,7 +453,7 @@ function extractVTPlaybook(text) {
   return { html: block, title };
 }
 
-async function writeQuarterlyReview(reviewData, userId) {
+async function writeQuarterlyReview(reviewData, userId, clientName) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!userId || !uuidPattern.test(userId)) {
     throw new Error('Quarterly review write rejected: user_id must be a valid UUID');
@@ -531,6 +531,9 @@ async function writeQuarterlyReview(reviewData, userId) {
       } else {
         patchBody.user_id = userId;
         patchBody.quarter = reviewData.quarter || null;
+        // user_name is NOT NULL with no default (confirmed live 2026-07-02 via schema check,
+        // same class of gap as ERR-NET-28 -- this INSERT branch previously omitted it entirely).
+        patchBody.user_name = clientName || 'Client';
         patchBody.created_at = new Date().toISOString();
         const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content`, {
           method: 'POST',
@@ -1099,6 +1102,73 @@ exports.handler = async (event) => {
           // path below rather than losing the request entirely.
         }
       }
+
+      // ── PREP ROOM BACKGROUND BUILD TRIGGER (cs-13/cs-14 Quarterly Review, 2026-07-02) ──
+      // Same pattern as the cs-15 trigger above. cs-13 v4.1 and cs-14 v4.1 each added an
+      // explicit trigger phrase ("Build my Look Backward" / "Build my Look Forward") between
+      // their final conversational lock step and Mini-mode 3 Synthesis + Output, for the
+      // identical reason cs-15 needed one: that mode transition was confirmed live (via the
+      // cs-15 case) to hit Netlify's ~30s sync ceiling, since Synthesis began automatically
+      // the instant the prior step closed with no client-side pause to intercept. cs-13 and
+      // cs-14 share this exact architecture, so the same fix pattern applies unchanged.
+      if (prepRoute === 'menu-quarterly-review-prep' && userId) {
+        const lastUserMsgForQRTrigger = [...messages].reverse().find(m => m.role === 'user');
+        const qrTriggerText = lastUserMsgForQRTrigger && typeof lastUserMsgForQRTrigger.content === 'string'
+          ? lastUserMsgForQRTrigger.content.trim().toLowerCase() : '';
+        const isLookBackwardTrigger = qrTriggerText === 'build my look backward';
+        const isLookForwardTrigger = qrTriggerText === 'build my look forward';
+
+        if (isLookBackwardTrigger || isLookForwardTrigger) {
+          const reviewType = isLookBackwardTrigger ? 'look_backward' : 'look_forward';
+          const jobPayload = {
+            systemPrompt,
+            messages: [
+              { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + buildContextString(context) + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
+              { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
+              ...messages.map(m => ({ role: m.role, content: m.content }))
+            ],
+            reportKind: 'quarterly_review',
+            reviewType,
+            meta: { clientName: userName || 'Client' }
+          };
+
+          const createRes = await fetch(`${SUPABASE_URL}/rest/v1/report_jobs`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+              'Content-Type': 'application/json', 'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ user_id: userId, box_id: reviewType, room: 'prep', request_payload: jobPayload })
+          });
+          const createdQRJob = (await createRes.json())?.[0];
+
+          if (createdQRJob && createdQRJob.id) {
+            try {
+              const invokeRes = await fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId: createdQRJob.id })
+              });
+              if (invokeRes.status !== 202) {
+                console.error('Background function invocation returned unexpected status:', invokeRes.status);
+              }
+            } catch (err) {
+              console.error('Failed to invoke background function:', err);
+            }
+
+            return {
+              statusCode: 200, headers: corsHeaders(),
+              body: JSON.stringify({
+                message: (isLookBackwardTrigger ? 'Your Look Backward report is being built.' : 'Your Look Forward report is being built.') + ' This usually takes about 30-90 seconds — feel free to check back.',
+                reportJobId: createdQRJob.id,
+                hasLogsToday: true
+              })
+            };
+          }
+          // If job creation failed for any reason, fall through to the normal synchronous
+          // path below rather than losing the request entirely.
+        }
+      }
     } else {
       const hasOP = await hasOperatingPicture(userId);
       if (!hasOP) {
@@ -1238,7 +1308,7 @@ exports.handler = async (event) => {
           reportType = quarterlyData.type === 'look_forward' ? 'look_forward' : 'look_backward';
         }
         try {
-          await writeQuarterlyReview(quarterlyData, userId);
+          await writeQuarterlyReview(quarterlyData, userId, userName);
           console.log('Quarterly review row written for user:', userId, 'type:', quarterlyData.type);
         } catch (qErr) {
           console.error('Quarterly review write failed:', qErr);
