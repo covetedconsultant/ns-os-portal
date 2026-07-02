@@ -302,19 +302,27 @@ export default async (req: Request) => {
 
     const { systemPrompt, messages, boxLabel, meta, reportKind } = job.request_payload;
 
+    // max_tokens is report-kind-aware (2026-07-02, revised): originally a flat 4096 for all
+    // kinds, raised to 8192 after a real Weekly Plan build hit the 4096 cap mid-generation
+    // (output_tokens: 4096 exactly, raw length 12,922 chars). That same flat 8192 was then
+    // hit AGAIN by the first real Quarterly Review build (output_tokens: 8192 exactly, raw
+    // length 26,131 chars, no closing %%END_QUARTERLY%% marker) -- cs-13/cs-14's client_html
+    // report is measurably larger than Weekly Plan's, so a single flat cap across all three
+    // kinds keeps getting outgrown by whichever kind is biggest. Sizing per kind instead of
+    // guessing one number that has to cover the largest case for everyone.
+    const maxTokensByKind: Record<string, number> = {
+      quarterly_review: 16384,
+      weekly_plan: 8192
+    };
+    const maxTokens = maxTokensByKind[reportKind] || 8192; // vt_playbook / undefined default
+
     const t0 = Date.now();
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_API_KEY as string, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        // max_tokens raised 4096 -> 8192 (2026-07-02): confirmed live that a real Weekly
-        // Plan build (cs-15) hit the 4096 cap mid-generation (output_tokens: 4096 exactly,
-        // %%WEEKLY_PLAN%% JSON truncated before its closing marker, raw length 12,922 chars).
-        // Weekly Plan's report is JSON-wrapped HTML (full_report field) which is naturally
-        // larger than a VT playbook's plain HTML block -- 8192 gives real headroom above the
-        // one measured real-world case without guessing at an arbitrary multiple.
-        max_tokens: 8192,
+        max_tokens: maxTokens,
         system: systemPrompt,
         messages
       })
