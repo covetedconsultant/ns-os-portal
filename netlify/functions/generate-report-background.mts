@@ -48,6 +48,61 @@ function buildVTPlaybookOutputBlock(boxLabel: string) {
     '- If this block is missing or malformed, the playbook will not display for the client at all.';
 }
 
+// ── WEEKLY PLAN (cs-15, 2026-07-02) ────────────────────────────────────────
+// Mirrors chat.js's extractWeeklyPlan()/writeWeeklyPlan() exactly, kept in sync manually
+// (same real maintenance cost flagged at the top of this file for the VT functions).
+function extractWeeklyPlan(text: string) {
+  const start = text.indexOf('%%WEEKLY_PLAN%%');
+  const end = text.indexOf('%%END_WEEKLY_PLAN%%');
+  if (start === -1 || end === -1 || end <= start) return null;
+  const jsonStr = text.slice(start + '%%WEEKLY_PLAN%%'.length, end).trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('WEEKLY_PLAN JSON parse failed:', e, 'Raw:', jsonStr);
+    return null;
+  }
+}
+
+async function writeWeeklyPlan(reportData: any, userId: string) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!userId || !uuidPattern.test(userId)) {
+    throw new Error('Weekly Plan write rejected: user_id must be a valid UUID');
+  }
+  const payload = {
+    user_id: userId,
+    quarter: reportData.quarter || null,
+    week_number: typeof reportData.week_number === 'number' ? reportData.week_number : null,
+    quarterly_focus_professional: reportData.quarterly_focus_professional || null,
+    quarterly_focus_personal: reportData.quarterly_focus_personal || null,
+    professional_story: reportData.professional_story || null,
+    personal_story: reportData.personal_story || null,
+    bronze_standard_met: typeof reportData.bronze_standard_met === 'boolean' ? reportData.bronze_standard_met : null,
+    this_week_bronze: reportData.this_week_bronze || null,
+    this_week_silver: reportData.this_week_silver || null,
+    this_week_gold: reportData.this_week_gold || null,
+    coaching_call_say: reportData.coaching_call_say || null,
+    coaching_call_ask: reportData.coaching_call_ask || null,
+    coaching_call_request: reportData.coaching_call_request || null,
+    playbook_recommendation: reportData.playbook_recommendation || null,
+    carried_forward: reportData.carried_forward || null,
+    full_report: reportData.full_report || null,
+    created_at: new Date().toISOString()
+  };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/weekly_planning_reports`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_SERVICE_KEY as string,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('weekly_planning_reports INSERT failed: ' + await res.text());
+  return await res.json();
+}
+
 function extractVTPlaybook(text: string) {
   const start = text.indexOf('%%VT_PLAYBOOK%%');
   const end = text.indexOf('%%END_VT_PLAYBOOK%%');
@@ -123,7 +178,7 @@ export default async (req: Request) => {
 
     await updateJob(jobId, { status: 'processing' });
 
-    const { systemPrompt, messages, boxLabel, meta } = job.request_payload;
+    const { systemPrompt, messages, boxLabel, meta, reportKind } = job.request_payload;
 
     const t0 = Date.now();
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -149,6 +204,33 @@ export default async (req: Request) => {
     const inputTokens = data.usage?.input_tokens ?? null;
     const outputTokens = data.usage?.output_tokens ?? null;
     console.log('generate-report-background: job', jobId, 'AI generation took', elapsedMs, 'ms, input_tokens', inputTokens, 'output_tokens', outputTokens);
+
+    // ── Branch by report kind (2026-07-02) ──────────────────────────────────
+    // reportKind is absent on VT jobs created before this field existed — default
+    // to the original vt_playbook behavior for backward compatibility.
+    if (reportKind === 'weekly_plan') {
+      const weeklyPlanData = extractWeeklyPlan(message);
+      if (!weeklyPlanData) {
+        await updateJob(jobId, { status: 'error', error_message: 'No %%WEEKLY_PLAN%% block found or JSON parse failed. Raw length: ' + message.length, input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
+        return;
+      }
+      try {
+        await writeWeeklyPlan(weeklyPlanData, job.user_id);
+      } catch (writeErr) {
+        await updateJob(jobId, { status: 'error', error_message: 'weekly_planning_reports write failed: ' + String(writeErr).slice(0, 400), input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
+        return;
+      }
+      await updateJob(jobId, {
+        status: 'done',
+        result_html: weeklyPlanData.full_report || null,
+        result_title: 'Weekly Plan — Week ' + (weeklyPlanData.week_number ?? '?'),
+        completed_at: new Date().toISOString(),
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        generation_ms: elapsedMs
+      });
+      return;
+    }
 
     const extracted = extractVTPlaybook(message);
     if (!extracted) {
