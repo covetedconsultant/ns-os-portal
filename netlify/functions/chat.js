@@ -977,7 +977,20 @@ exports.handler = async (event) => {
         // headroom above the largest confirmed real-world need (~7,500 tokens estimated
         // for a full VT playbook: CSS overhead + content comparable to a working
         // quarterly report), not just a doubling of the old number.
-        max_tokens: 10000,
+        // max_tokens set to 5000 (2026-07-01, revised down from an initial 10000 attempt):
+        // 10000 raised generation time enough to trip Netlify's synchronous function
+        // timeout on this project's plan (nf_team_dev -> 10s ceiling, confirmed via
+        // netlify-project-services-reader) -- two consecutive live retries at 10000 both
+        // failed with a generic "Connection error" on a full VT playbook build, right after
+        // the token bump, with nothing else changed. 5000 is chosen as an evidence-based
+        // middle value: real headroom above the VT design standard's ~2830-token CSS
+        // overhead (so most playbooks should complete instead of truncating), while staying
+        // well under the value that reliably timed out. This is a stopgap, not a permanent
+        // fix -- see LOG-DEPLOY-ERRORS / Master Tracker: VT playbook generation may need to
+        // move to a Netlify background function (15-min timeout) to support a token budget
+        // large enough for guaranteed-complete long-document generation without any risk of
+        // hitting the sync-function wall-clock ceiling.
+        max_tokens: 5000,
         system: systemPrompt,
         messages: [
           { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
