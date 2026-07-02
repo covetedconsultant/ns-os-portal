@@ -1120,8 +1120,36 @@ exports.handler = async (event) => {
 
         if (isLookBackwardTrigger || isLookForwardTrigger) {
           const reviewType = isLookBackwardTrigger ? 'look_backward' : 'look_forward';
+
+          // ── Trimmed system prompt for the background job (2026-07-02) ────────────
+          // The conversational systemPrompt (built above, in scope) carries BOTH cs-13
+          // and cs-14 plus BOTH their REF docs, because the menu router doesn't know
+          // which document the client is doing until they say so. By this point, the
+          // trigger phrase has already told us exactly which one -- so the background
+          // job only needs to read its own protocol and its own REF doc, not its
+          // sibling's. Confirmed live 2026-07-02: this was adding ~20-25K unnecessary
+          // input tokens to every quarterly background build (both docs run ~19-23K
+          // chars each). REF-quarterly-review-conversation-standard and LOG-quarterly-
+          // review still apply to both document types, so those stay either way.
+          // menuPrompt (the router document) is deliberately left out here -- its own
+          // text says it "steps back entirely" once it routes to CS-13/CS-14, so the
+          // background generation call has no use for it.
+          let backgroundSystemPrompt = '';
+          if (isLookBackwardTrigger) {
+            if (cs13Prompt) backgroundSystemPrompt += '\n\n---\n\n## CS-13 — LOOK BACKWARD\n\n[SYSTEM: Loaded by chat.js. No mid-conversation fetch needed.]\n\n' + cs13Prompt;
+            if (refConvStd) backgroundSystemPrompt += '\n\n---\n\n## REF — QUARTERLY REVIEW CONVERSATION STANDARD\n\n' + refConvStd;
+            if (refLookBack) backgroundSystemPrompt += '\n\n---\n\n## REF — LOOK BACKWARD\n\n' + refLookBack;
+          } else {
+            if (cs14Prompt) backgroundSystemPrompt += '\n\n---\n\n## CS-14 — LOOK FORWARD\n\n[SYSTEM: Loaded by chat.js. No mid-conversation fetch needed.]\n\n' + cs14Prompt;
+            if (refConvStd) backgroundSystemPrompt += '\n\n---\n\n## REF — QUARTERLY REVIEW CONVERSATION STANDARD\n\n' + refConvStd;
+            if (refLookFwd) backgroundSystemPrompt += '\n\n---\n\n## REF — LOOK FORWARD\n\n' + refLookFwd;
+          }
+          if (refCoachesPov) backgroundSystemPrompt += '\n\n---\n\n## REF — COACHES POV\n\n' + refCoachesPov;
+          if (logQR) backgroundSystemPrompt += '\n\n---\n\n## LOG — QUARTERLY REVIEW\n\n' + logQR;
+          backgroundSystemPrompt += buildQuarterlyOutputBlock(reviewType);
+
           const jobPayload = {
-            systemPrompt,
+            systemPrompt: backgroundSystemPrompt,
             messages: [
               { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + buildContextString(context) + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
               { role: 'assistant', content: 'Understood. I have the full operating picture. Ready.' },
