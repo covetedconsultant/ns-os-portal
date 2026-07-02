@@ -30,6 +30,33 @@ const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MODEL = 'claude-sonnet-4-6';
 
+// Shared report-writer functions (2026-07-02): getPrompt, extractWeeklyPlan,
+// writeWeeklyPlan, extractQuarterly, writeQuarterlyReview, extractVTPlaybook,
+// wrapVTPlaybookInTemplate — also used by generate-report-background.mts, both
+// pulling from the SAME file (netlify/functions/lib/report-writers.mjs). Moved
+// out of this file to kill the manual-sync-or-drift risk that existed when both
+// files carried hand-copied duplicates. See project memory:
+// project_chat_js_restructuring_plan.md.
+//
+// report-writers.mjs is an ES module file, and this file (chat.js) is plain
+// CommonJS -- require() cannot load an ES module, so the functions are loaded
+// with a dynamic import() instead, assigned once per cold start below. This is
+// a standard, Netlify/Node-supported bridge (verified 2026-07-02), not a hack.
+let getPrompt, extractWeeklyPlan, writeWeeklyPlan, extractQuarterly,
+    writeQuarterlyReview, extractVTPlaybook, wrapVTPlaybookInTemplate;
+
+const reportWritersReady = import('./lib/report-writers.mjs').then((mod) => {
+  ({
+    getPrompt,
+    extractWeeklyPlan,
+    writeWeeklyPlan,
+    extractQuarterly,
+    writeQuarterlyReview,
+    extractVTPlaybook,
+    wrapVTPlaybookInTemplate
+  } = mod);
+});
+
 // Virtual Team box prompts — the ONLY protocol_ids room=virtualteam may load.
 // Frontend buttons send the entry-point boxId (the "a" prompt where a box has sub-flows).
 // The b/c sub-flows are reachable from inside their parent box, so they are allowlisted too.
@@ -202,41 +229,9 @@ function buildVTPlaybookOutputBlock(boxLabel) {
     '- If this block is missing, malformed, or missing its closing %%END_VT_PLAYBOOK%% tag, the playbook will not display for the client at all.';
 }
 
-// ── VT PLAYBOOK TEMPLATE WRAP (2026-07-02, Phase 1 CSS-injection fix) ────────────
-// General, reusable mechanism: takes marker-extracted content (from ANY box's
-// %%VT_PLAYBOOK%% output) and mechanically wraps it in REF-pdf-html-standard's
-// actual template, fetched live from Supabase — never hardcoded/retyped. Same
-// pattern is intended to extend to Weekly Plan / Quarterly in Phase 2 (their own
-// wrap calls, not built here yet — Phase 1 scope is VT only per the handoff).
-// Extracts just the <style>...</style> block from REF-pdf-html-standard (the doc
-// itself is prose + one illustrative example, not a machine-splicable shell) and
-// builds a fixed header/footer per the standard's own Section 7 rule.
-async function wrapVTPlaybookInTemplate(contentHtml, title, meta) {
-  const m = meta || {};
-  const clientName = m.clientName || 'Client';
-  const firmName = m.firmName || 'Coveted Consultant';
-  const dateStr = m.dateStr || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const displayTitle = title || 'Virtual Team Playbook';
-
-  let styleBlock = '';
-  try {
-    const refDoc = await getPrompt('REF-pdf-html-standard');
-    if (refDoc) {
-      const styleMatch = refDoc.match(/<style>[\s\S]*?<\/style>/);
-      if (styleMatch) styleBlock = styleMatch[0];
-    }
-  } catch (err) {
-    console.error('wrapVTPlaybookInTemplate: REF-pdf-html-standard fetch/parse failed:', err);
-  }
-
-  // Fail soft: if the style block couldn't be fetched/parsed for any reason,
-  // still return the content wrapped in a minimal shell rather than losing the
-  // report entirely. The client gets an unstyled-but-complete document, not an error.
-  const footerLine = '<p><em>' + clientName + ' | ' + firmName + ' | ' + dateStr + '</em></p>';
-  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n' + styleBlock +
-    '\n</head>\n<body>\n' + footerLine + '\n<h1>' + displayTitle + '</h1>\n<hr>\n' +
-    contentHtml + '\n<hr>\n' + footerLine + '\n</body>\n</html>';
-}
+// wrapVTPlaybookInTemplate now lives in netlify/functions/lib/report-writers.mts
+// (required in below), shared with generate-report-background.mts. Extracted
+// 2026-07-02 — see project memory: project_chat_js_restructuring_plan.md.
 
 // ── ERR-NET-25 fix (2026-07-01): verify the caller's Supabase access token ────
 // actually belongs to the userId the request claims. Before this fix, chat.js
@@ -271,16 +266,7 @@ async function verifyUserId(event, claimedUserId) {
   }
 }
 
-async function getPrompt(skillId) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/system_prompts?protocol_id=eq.${skillId}&active=eq.true&select=system_prompt&limit=1`, {
-    headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
-    }
-  });
-  const data = await res.json();
-  return data?.[0]?.system_prompt || null;
-}
+// getPrompt now lives in netlify/functions/lib/report-writers.mts (required in below).
 
 async function hasOperatingPicture(userId) {
   if (!userId) return false;
@@ -350,208 +336,10 @@ function extractAndWriteAOP(text, userId) {
   }
 }
 
-// ── WEEKLY PLAN WRITE (2026-07-01) ────────────────────────────────────────────
-// Same shape as extractAndWriteAOP/writeAOP above. Extracts %%WEEKLY_PLAN%% JSON
-// from the assistant's raw response text and inserts a row into weekly_planning_reports.
-// Weekly Plan is always a fresh row per week (not an upsert) — CS-15 Assemble mode
-// already reads the last 3 rows for streak detection, so history must be preserved.
-function extractWeeklyPlan(text) {
-  const start = text.indexOf('%%WEEKLY_PLAN%%');
-  const end = text.indexOf('%%END_WEEKLY_PLAN%%');
-  if (start === -1 || end === -1 || end <= start) return null;
-  const jsonStr = text.slice(start + '%%WEEKLY_PLAN%%'.length, end).trim();
-  try {
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    console.error('WEEKLY_PLAN JSON parse failed:', e, 'Raw:', jsonStr);
-    return null;
-  }
-}
-
-async function writeWeeklyPlan(reportData, userId, clientName) {
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!userId || !uuidPattern.test(userId)) {
-    throw new Error('Weekly Plan write rejected: user_id must be a valid UUID');
-  }
-  const payload = {
-    user_id: userId,
-    // user_name and session_date are NOT NULL with no DB default (confirmed live 2026-07-02
-    // via a 23502 insert failure) -- writeWeeklyPlan previously omitted both entirely.
-    user_name: clientName || 'Client',
-    session_date: new Date().toISOString().slice(0, 10),
-    quarter: reportData.quarter || null,
-    week_number: typeof reportData.week_number === 'number' ? reportData.week_number : null,
-    quarterly_focus_professional: reportData.quarterly_focus_professional || null,
-    quarterly_focus_personal: reportData.quarterly_focus_personal || null,
-    professional_story: reportData.professional_story || null,
-    personal_story: reportData.personal_story || null,
-    bronze_standard_met: typeof reportData.bronze_standard_met === 'boolean' ? reportData.bronze_standard_met : null,
-    this_week_bronze: reportData.this_week_bronze || null,
-    this_week_silver: reportData.this_week_silver || null,
-    this_week_gold: reportData.this_week_gold || null,
-    coaching_call_say: reportData.coaching_call_say || null,
-    coaching_call_ask: reportData.coaching_call_ask || null,
-    coaching_call_request: reportData.coaching_call_request || null,
-    playbook_recommendation: reportData.playbook_recommendation || null,
-    carried_forward: reportData.carried_forward || null,
-    full_report: reportData.full_report || null,
-    created_at: new Date().toISOString()
-  };
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/weekly_planning_reports`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw new Error('weekly_planning_reports INSERT failed: ' + await res.text());
-  return await res.json();
-}
-
-// ── QUARTERLY REVIEW WRITE (2026-07-01) ───────────────────────────────────────
-// Extracts %%QUARTERLY%% JSON (type: look_backward | look_forward) and writes:
-//   1. a fresh row to quarterly_reviews (always insert — one row per session, per
-//      the same history-preserving pattern as weekly_planning_reports)
-//   2. an UPSERT-style update to quarterly_dashboard_content for the fields the
-//      session locked (only whatever keys are present in quarterly_dashboard_updates
-//      are touched — never blindly overwrites the whole row)
-function extractQuarterly(text) {
-  const start = text.indexOf('%%QUARTERLY%%');
-  const end = text.indexOf('%%END_QUARTERLY%%');
-  if (start === -1 || end === -1 || end <= start) return null;
-  const jsonStr = text.slice(start + '%%QUARTERLY%%'.length, end).trim();
-  try {
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    console.error('QUARTERLY JSON parse failed:', e, 'Raw:', jsonStr);
-    return null;
-  }
-}
-
-function extractVTPlaybook(text) {
-  // VT playbooks have no dedicated Supabase table (no schema to parse into) —
-  // the marker just delimits the raw playbook HTML plus an optional title line.
-  // Format emitted by vt-* prompts:
-  //   %%VT_PLAYBOOK%%
-  //   TITLE: CC-BOX02-2026-07-01-Mendes-Client-Avatar-Profile
-  //   <html>...full styled playbook...</html>
-  //   %%END_VT_PLAYBOOK%%
-  const start = text.indexOf('%%VT_PLAYBOOK%%');
-  const end = text.indexOf('%%END_VT_PLAYBOOK%%');
-  if (start === -1 || end === -1 || end <= start) return null;
-  let block = text.slice(start + '%%VT_PLAYBOOK%%'.length, end).trim();
-  let title = null;
-  const titleMatch = block.match(/^TITLE:\s*(.+)$/m);
-  if (titleMatch) {
-    title = titleMatch[1].trim();
-    block = block.replace(/^TITLE:\s*.+\n?/m, '').trim();
-  }
-  if (!block) return null;
-  return { html: block, title };
-}
-
-async function writeQuarterlyReview(reviewData, userId, clientName) {
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!userId || !uuidPattern.test(userId)) {
-    throw new Error('Quarterly review write rejected: user_id must be a valid UUID');
-  }
-  if (reviewData.type !== 'look_backward' && reviewData.type !== 'look_forward') {
-    throw new Error('Quarterly review write rejected: type must be look_backward or look_forward');
-  }
-
-  const reviewPayload = {
-    user_id: userId,
-    quarter: reviewData.quarter || null,
-    type: reviewData.type,
-    client_html: reviewData.client_html || null,
-    coach_pov: reviewData.coach_pov || null,
-    personal_grade: reviewData.personal_grade || null,
-    professional_grade: reviewData.professional_grade || null,
-    personal_explanation: reviewData.personal_explanation || null,
-    professional_explanation: reviewData.professional_explanation || null,
-    gold_expression: reviewData.gold_expression || null,
-    hardest_box: reviewData.hardest_box || null,
-    unfinished_thing: reviewData.unfinished_thing || null,
-    credit_attribution: reviewData.credit_attribution || null,
-    defining_moment: reviewData.defining_moment || null,
-    improvement_ask: reviewData.improvement_ask || null,
-    created_at: new Date().toISOString()
-  };
-  const reviewRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_reviews`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_SERVICE_KEY,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify(reviewPayload)
-  });
-  if (!reviewRes.ok) throw new Error('quarterly_reviews INSERT failed: ' + await reviewRes.text());
-  const insertedReview = await reviewRes.json();
-
-  // Only touch quarterly_dashboard_content if the session actually locked fields for it.
-  const updates = reviewData.quarterly_dashboard_updates;
-  if (updates && typeof updates === 'object' && Object.keys(updates).length > 0) {
-    const allowedFields = [
-      'quarterly_focus_personal','quarterly_focus_professional',
-      'quarterly_focus_personal_goal','quarterly_focus_professional_goal',
-      'personal_task','professional_task','personal_task_why','professional_task_why',
-      'personal_metric','professional_metric',
-      'personal_watch_out_limit','professional_watch_out_limit',
-      'look_backward_summary'
-    ];
-    const patchBody = {};
-    for (const key of allowedFields) {
-      if (updates[key] !== undefined && updates[key] !== null && updates[key] !== '') {
-        patchBody[key] = updates[key];
-      }
-    }
-    if (Object.keys(patchBody).length > 0) {
-      patchBody.updated_at = new Date().toISOString();
-      const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}&select=id&limit=1`, {
-        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
-      });
-      const existing = await checkRes.json();
-      if (existing && existing.length > 0) {
-        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content?user_id=eq.${userId}&quarter=eq.${encodeURIComponent(reviewData.quarter || '')}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify(patchBody)
-        });
-        if (!patchRes.ok) console.error('quarterly_dashboard_content PATCH failed:', await patchRes.text());
-      } else {
-        patchBody.user_id = userId;
-        patchBody.quarter = reviewData.quarter || null;
-        // user_name is NOT NULL with no default (confirmed live 2026-07-02 via schema check,
-        // same class of gap as ERR-NET-28 -- this INSERT branch previously omitted it entirely).
-        patchBody.user_name = clientName || 'Client';
-        patchBody.created_at = new Date().toISOString();
-        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/quarterly_dashboard_content`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_SERVICE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify(patchBody)
-        });
-        if (!insertRes.ok) console.error('quarterly_dashboard_content INSERT failed:', await insertRes.text());
-      }
-    }
-  }
-
-  return insertedReview;
-}
+// extractWeeklyPlan, writeWeeklyPlan, extractQuarterly, extractVTPlaybook, and
+// writeQuarterlyReview now live in netlify/functions/lib/report-writers.mts
+// (required in below), shared with generate-report-background.mts. Extracted
+// 2026-07-02 — see project memory: project_chat_js_restructuring_plan.md.
 
 // ── CONVERSATION LOG WRITE ──────────────────────────────────────────────────────
 // Split into two functions: user message written BEFORE Anthropic call,
@@ -795,6 +583,11 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: corsHeaders(), body: '' };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   if (!ANTHROPIC_API_KEY) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'API key not configured' }) };
+
+  // Wait for the shared report-writer module (dynamic import, see top of file) —
+  // resolves instantly after the first cold-start call, since Node caches the
+  // module import after that.
+  await reportWritersReady;
 
   try {
     const { messages, context, userName, userId, room, boxId } = JSON.parse(event.body);
