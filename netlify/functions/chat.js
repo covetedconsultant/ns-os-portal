@@ -966,7 +966,18 @@ exports.handler = async (event) => {
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 2048,
+        // max_tokens raised 2048 -> 10000 (2026-07-01): the old 2048 ceiling was shared
+        // across every room with no override. Confirmed root cause of VT playbook
+        // truncation via live test (Box 2 cut off mid-CSS, never reached
+        // %%END_VT_PLAYBOOK%%) and via production data: a working quarterly_reviews
+        // row was already 18,807 chars (~4,701 tokens) -- over DOUBLE the old budget on
+        // its own -- sitting next to a 109-char row that looks like a silent truncation
+        // of the same kind. The VT master design standard's CSS alone is ~11,322 chars
+        // (~2,830 tokens) before any playbook content is written. 10000 gives real
+        // headroom above the largest confirmed real-world need (~7,500 tokens estimated
+        // for a full VT playbook: CSS overhead + content comparable to a working
+        // quarterly report), not just a doubling of the old number.
+        max_tokens: 10000,
         system: systemPrompt,
         messages: [
           { role: 'user', content: '[CONTEXT — DO NOT DISPLAY TO USER]\n' + contextStr + '\n[END CONTEXT]\n\nUser first name: ' + (userName || 'there') },
