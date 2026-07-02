@@ -877,14 +877,23 @@ exports.handler = async (event) => {
 
       // (2026-07-02, Phase 3 proof-of-concept) TIMING-SWEEP EXPANSION: vt-6, vt-2a, vt-10
       // route their real trigger phrases to the background-function path instead of the
-      // normal synchronous call below. Scoped to these three boxes only, for real-timing
-      // data collection across the size range (smallest/mid/largest of the 9 report-producing
-      // VT boxes) — see HANDOFF-2026-07-02-vt-phase1-css-fix-and-phase3-evidence.md and the
-      // report_jobs table. Every other VT box (and these three on any non-trigger message)
-      // proceeds through the existing synchronous path unchanged.
+      // normal synchronous call below. Covers all 11 report-producing VT boxes as of
+      // 2026-07-02 (vt-6/vt-2a/vt-10 proven first; remaining 8 added same day after
+      // confirming each box's real trigger phrase directly from its Supabase protocol
+      // text — see project_vt_background_generation_lessons memory note). vt-2b, vt-3b,
+      // vt-4b are non-report companion/practice skills and are intentionally excluded —
+      // they never produce a %%VT_PLAYBOOK%% block, so they stay on the synchronous path.
       const VT_BACKGROUND_TRIGGER_PHRASES = {
-        'vt-6': 'create box 6 playbook',
         'vt-2a': 'create box 2 playbook',
+        'vt-3a': 'create box 3 playbook',
+        'vt-4a': 'create box 4 playbook',
+        'vt-4c': 'create box 4 playbook',
+        'vt-5': 'create box 5 playbook',
+        'vt-6': 'create box 6 playbook',
+        'vt-7': 'create box 7 playbook',
+        'vt-8': 'create box 8 playbook',
+        'vt-8b': 'create box 8 playbook',
+        'vt-9': 'create box 9 playbook',
         'vt-10': 'create box 10 playbook'
       };
       const lastUserMsgForTrigger = [...messages].reverse().find(m => m.role === 'user');
