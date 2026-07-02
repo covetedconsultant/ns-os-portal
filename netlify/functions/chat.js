@@ -910,7 +910,7 @@ exports.handler = async (event) => {
 
         if (createdJob && createdJob.id) {
           // Fire the background function — do NOT await its completion, that's the whole point.
-          fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/.netlify/functions/generate-report-background`, {
+          fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jobId: createdJob.id })
