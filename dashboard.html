@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-02-b-weekly-plan-poll-label-fix -->
+  <!-- cache-bust: 2026-07-02-c-quarterly-review-poll-support -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1944,23 +1944,25 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
 
     if (row.status === 'done' && row.result_html) {
       placeholderRow.remove();
-      // Report-kind-aware labeling (2026-07-02 fix): this poller now serves both VT
-      // playbooks (room='virtualteam') and Weekly Plan (room='prep', box_id='weekly_plan').
-      // Previously hardcoded 'virtualteam'/'vt_playbook' regardless of job kind, which
-      // would have mislabeled a completed Weekly Plan report as a Virtual Team Playbook.
-      const isWeeklyPlan = row.box_id === 'weekly_plan';
-      const chatIdForCard = isWeeklyPlan ? 'prep' : 'virtualteam';
-      const reportTypeForCard = isWeeklyPlan ? 'weekly_plan' : 'vt_playbook';
-      const readyLabel = isWeeklyPlan ? 'Your Weekly Plan is ready' : 'Your playbook is ready';
-      appendMessage(messagesId, 'assistant', row.result_title ? readyLabel + ' — **' + row.result_title + '**' : readyLabel + '.', chatIdForCard, row.result_html, reportTypeForCard);
+      // Report-kind-aware labeling (2026-07-02 fix, extended for Quarterly Review): this
+      // poller now serves VT playbooks (room='virtualteam'), Weekly Plan (room='prep',
+      // box_id='weekly_plan'), and Quarterly Review (room='prep', box_id='look_backward'
+      // or 'look_forward'). Previously hardcoded 'virtualteam'/'vt_playbook' regardless of
+      // job kind, which would have mislabeled every non-VT report.
+      const kindMap = {
+        weekly_plan:    { chatId: 'prep', reportType: 'weekly_plan',   readyLabel: 'Your Weekly Plan is ready' },
+        look_backward:  { chatId: 'prep', reportType: 'look_backward', readyLabel: 'Your Look Backward report is ready' },
+        look_forward:   { chatId: 'prep', reportType: 'look_forward',  readyLabel: 'Your Look Forward report is ready' }
+      };
+      const kind = kindMap[row.box_id] || { chatId: 'virtualteam', reportType: 'vt_playbook', readyLabel: 'Your playbook is ready' };
+      appendMessage(messagesId, 'assistant', row.result_title ? kind.readyLabel + ' — **' + row.result_title + '**' : kind.readyLabel + '.', kind.chatId, row.result_html, kind.reportType);
       return;
     }
     if (row.status === 'error') {
       placeholderRow.remove();
-      const isWeeklyPlan = row.box_id === 'weekly_plan';
-      appendMessage(messagesId, 'assistant', isWeeklyPlan
-        ? 'Something went wrong building your Weekly Plan. Please try again — if this keeps happening, let your Chief of Staff know.'
-        : 'Something went wrong building your playbook. Please try again — if this keeps happening, let your Chief of Staff know.');
+      const errorLabelMap = { weekly_plan: 'Weekly Plan', look_backward: 'Look Backward report', look_forward: 'Look Forward report' };
+      const errorLabel = errorLabelMap[row.box_id] || 'playbook';
+      appendMessage(messagesId, 'assistant', 'Something went wrong building your ' + errorLabel + '. Please try again — if this keeps happening, let your Chief of Staff know.');
       console.error('Report job errored:', row.error_message);
       return;
     }
