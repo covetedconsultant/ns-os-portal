@@ -64,13 +64,17 @@ function extractWeeklyPlan(text: string) {
   }
 }
 
-async function writeWeeklyPlan(reportData: any, userId: string) {
+async function writeWeeklyPlan(reportData: any, userId: string, clientName: string) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!userId || !uuidPattern.test(userId)) {
     throw new Error('Weekly Plan write rejected: user_id must be a valid UUID');
   }
   const payload = {
     user_id: userId,
+    // user_name and session_date are NOT NULL with no DB default (confirmed live 2026-07-02
+    // via a 23502 insert failure) -- writeWeeklyPlan previously omitted both entirely.
+    user_name: clientName || 'Client',
+    session_date: new Date().toISOString().slice(0, 10),
     quarter: reportData.quarter || null,
     week_number: typeof reportData.week_number === 'number' ? reportData.week_number : null,
     quarterly_focus_professional: reportData.quarterly_focus_professional || null,
@@ -221,7 +225,7 @@ export default async (req: Request) => {
         return;
       }
       try {
-        await writeWeeklyPlan(weeklyPlanData, job.user_id);
+        await writeWeeklyPlan(weeklyPlanData, job.user_id, meta?.clientName);
       } catch (writeErr) {
         await updateJob(jobId, { status: 'error', error_message: 'weekly_planning_reports write failed: ' + String(writeErr).slice(0, 400), input_tokens: inputTokens, output_tokens: outputTokens, generation_ms: elapsedMs });
         return;
