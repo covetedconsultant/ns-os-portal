@@ -188,6 +188,70 @@ export default async (req: Request) => {
 
     const wrappedHtml = await wrapVTPlaybookInTemplate(extracted.html, extracted.title, meta);
 
+    // ── Stage 1: Red → Yellow transition to playbook_sessions ─────────────────
+    // When a VT playbook build completes successfully, mark that box as yellow
+    // (playbook exists). A failed write here is logged but does NOT fail the job —
+    // the user gets their playbook regardless. Green promotion is handled separately
+    // by cs-15 (Weekly Plan, Stage 2).
+    try {
+      const psBoxId = job.box_id; // e.g. 'vt-4a'
+      const psBoxNumber = 'box_' + (psBoxId.match(/\d+/)?.[0] ?? ''); // 'box_4'
+      const psBoxName = (boxLabel || '').replace(/^Box \d+ /, ''); // 'Converse Leader'
+      const psUserName = meta?.clientName || 'Client';
+      const psDate = new Date().toISOString().slice(0, 10);
+
+      // Check if a row already exists for this user + box
+      const psCheckRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/playbook_sessions?user_id=eq.${job.user_id}&box_number=eq.${encodeURIComponent(psBoxNumber)}&select=id,status&limit=1`,
+        { headers: { 'apikey': SUPABASE_SERVICE_KEY as string, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      const psRows = await psCheckRes.json();
+      const psExisting = psRows?.[0];
+
+      if (psExisting) {
+        // Row exists — only update if not already green (never downgrade)
+        if (psExisting.status !== 'green') {
+          await fetch(`${SUPABASE_URL}/rest/v1/playbook_sessions?id=eq.${psExisting.id}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_SERVICE_KEY as string,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ status: 'yellow', session_date: psDate, updated_at: new Date().toISOString() })
+          });
+          console.log('generate-report-background: playbook_sessions updated to yellow for', job.user_id, psBoxNumber);
+        } else {
+          console.log('generate-report-background: playbook_sessions already green for', job.user_id, psBoxNumber, '— not downgrading');
+        }
+      } else {
+        // No row — insert new (first playbook build for this box)
+        await fetch(`${SUPABASE_URL}/rest/v1/playbook_sessions`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_KEY as string,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            user_id: job.user_id,
+            user_name: psUserName,
+            box_number: psBoxNumber,
+            box_name: psBoxName,
+            status: 'yellow',
+            session_date: psDate,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+        });
+        console.log('generate-report-background: playbook_sessions inserted yellow for', job.user_id, psBoxNumber);
+      }
+    } catch (psErr) {
+      console.error('generate-report-background: playbook_sessions write failed (non-fatal):', psErr);
+    }
+
     await updateJob(jobId, {
       status: 'done',
       result_html: wrappedHtml,
