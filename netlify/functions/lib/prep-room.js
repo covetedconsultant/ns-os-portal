@@ -175,15 +175,20 @@ async function handlePrepRoom({ messages, context, userName, userId }, deps) {
     systemPrompt += buildQuarterlyOutputBlock('look_forward');
   } else if (prepRoute === 'cs-17') {
     // North Star Notebook (added 2026-07-03, see LOG-cs-17). Conversational
-    // phase only — Step 0 governing REF is loaded upfront per the same
-    // full-chain-injection pattern used above, so the AI never needs a
-    // mid-conversation Supabase fetch. Deliberately NO output-override block
-    // and NO background-build trigger here: cs-17's synthesis stage (Step 3)
-    // depends on the job-scoping question left open in LOG-cs-17 and
-    // REF-async-report-generation-standard, and this handoff's scope is the
-    // button + routing only. Do not add a %%NORTH_STAR_NOTEBOOK%% marker or a
-    // background trigger block until that question is resolved and a REF
-    // defines the actual output contract chat.js should act on.
+    // phase (Step 0-2, live capture across arcs 1-6) — Step 0 governing REF
+    // is loaded upfront per the same full-chain-injection pattern used
+    // above, so the AI never needs a mid-conversation Supabase fetch. Step 3
+    // (synthesis) is a SEPARATE background-build trigger block below (see
+    // "PREP ROOM BACKGROUND BUILD TRIGGER (cs-17 North Star Notebook)"),
+    // wired 2026-07-03 once the job-scoping question in LOG-cs-17 /
+    // REF-async-report-generation-standard was resolved: ONE report_jobs
+    // entry per Notebook, matching the cs-15/cs-13/cs-14 pattern, with the
+    // many-Anthropic-calls loop living entirely inside
+    // generate-report-background.mts's north_star_notebook branch. No
+    // %%NORTH_STAR_NOTEBOOK%% output-override marker is added to this
+    // conversational systemPrompt — unlike cs-15/cs-13/cs-14, the synthesis
+    // stage does not replay this conversation; it re-derives its own
+    // prompts per section directly from north_star_notebook_sections rows.
     const [cs17Prompt, refNotebookConvStd] = await Promise.all([
       getPrompt('cs-17'),
       getPrompt('REF-north-star-notebook-conversation-standard')
@@ -374,6 +379,159 @@ async function handlePrepRoom({ messages, context, userName, userId }, deps) {
       }
       // If job creation failed for any reason, fall through to the normal synchronous
       // path below rather than losing the request entirely.
+    }
+  }
+
+  // ── PREP ROOM BACKGROUND BUILD TRIGGER (cs-17 North Star Notebook, 2026-07-03) ──
+  // Same pattern as the cs-15 / cs-13-cs-14 triggers above, with one structural
+  // difference: this job's request_payload carries notebookId + sections DATA
+  // instead of a systemPrompt/messages pair, because generate-report-
+  // background.mts's north_star_notebook branch constructs its OWN prompts
+  // per section/page internally (per REF-north-star-notebook-synthesis-
+  // templates) rather than replaying this chat conversation. Per cs-17's own
+  // protocol text, synthesis "fires only when all six arcs are confirmed
+  // closed" — the trigger phrase below is the explicit client-facing signal
+  // for that, matching the exact "build my ___" pattern cs-15/cs-13/cs-14 use.
+  //
+  // Job-scoping decision (2026-07-03, resolving the open item in LOG-cs-17 /
+  // REF-async-report-generation-standard): ONE report_jobs entry for the
+  // whole Notebook synthesis stage, not split into multiple tracked jobs —
+  // matches the existing single-job-per-report pattern above. Each section's
+  // scribed_output/analysis_output/measurable_goal is still written to
+  // north_star_notebook_sections incrementally, inside the background
+  // function, as each section's call succeeds — so nothing generated is lost
+  // even on a mid-job failure, though the client-facing signal is still a
+  // single done/error outcome per the html template's own "never render
+  // partially complete" rule.
+  if (prepRoute === 'cs-17' && userId) {
+    const lastUserMsgForNotebookTrigger = [...messages].reverse().find(m => m.role === 'user');
+    const isNotebookRealTrigger = lastUserMsgForNotebookTrigger &&
+      typeof lastUserMsgForNotebookTrigger.content === 'string' &&
+      lastUserMsgForNotebookTrigger.content.trim().toLowerCase() === 'build my north star notebook';
+
+    if (isNotebookRealTrigger) {
+      // Look up the notebook row for this user — most recent 'in_progress'
+      // notebook, since a user could theoretically have a prior 'complete'
+      // notebook from an earlier year still in the table.
+      const notebookRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/north_star_notebooks?user_id=eq.${userId}&status=eq.in_progress&select=id,year&order=created_at.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      const notebookRow = (await notebookRes.json())?.[0];
+
+      if (!notebookRow || !notebookRow.id) {
+        return {
+          response: {
+            statusCode: 200, headers: corsHeaders(),
+            body: JSON.stringify({
+              message: "I couldn't find an in-progress North Star Notebook for you yet — let's make sure all six arcs are captured first.",
+              hasLogsToday: true
+            })
+          }
+        };
+      }
+
+      const notebookId = notebookRow.id;
+
+      // Pull every captured section for this notebook — section_key, arc_name,
+      // and everything captured live during arcs 1-6 (raw_response,
+      // gold_silver_bronze, emotion, intensity, reason, goal_confirmed). This
+      // is the INPUT data the background function's per-section Anthropic
+      // calls need; scribed_output/analysis_output/measurable_goal are NOT
+      // selected here because they don't exist yet — they are what synthesis
+      // is about to produce.
+      const sectionsRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/north_star_notebook_sections?notebook_id=eq.${notebookId}&select=section_key,arc_name,raw_response,gold_silver_bronze,emotion,intensity,reason,goal_confirmed&order=section_key.asc`,
+        { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      const allSections = await sectionsRes.json();
+
+      const unconfirmed = (allSections || []).filter(s => !s.goal_confirmed);
+      if (!allSections || allSections.length === 0 || unconfirmed.length > 0) {
+        return {
+          response: {
+            statusCode: 200, headers: corsHeaders(),
+            body: JSON.stringify({
+              message: unconfirmed.length > 0
+                ? `A few sections still need to be confirmed before I can build the Notebook (${unconfirmed.map(s => s.section_key).join(', ')}). Let's finish those first.`
+                : "I couldn't find any captured sections for this Notebook yet — let's make sure all six arcs are captured first.",
+              hasLogsToday: true
+            })
+          }
+        };
+      }
+
+      const sections = allSections.map(s => ({
+        section_key: s.section_key,
+        arc_name: s.arc_name,
+        raw_response: s.raw_response,
+        gold_silver_bronze: s.gold_silver_bronze,
+        emotion: s.emotion,
+        intensity: s.intensity,
+        reason: s.reason
+      }));
+
+      // NOTE: company_name has no confirmed column on `profiles` (checked
+      // 2026-07-03 — profiles has display_name, user_name, email, is_test,
+      // environment, created_at, tier, user_id; no company field). Defaults
+      // to '' here, matching REF-north-star-notebook-html-template's own
+      // slot table which lists company_name as sourced from "context /
+      // profiles" — that REF's slot documentation is itself ahead of the
+      // actual schema and should be corrected in a future pass; not fixed
+      // here since it's a REF-document accuracy issue, not a code bug.
+      const jobPayload = {
+        notebookId,
+        userId,
+        sections,
+        meta: {
+          clientName: userName || 'Client',
+          companyName: '',
+          notebookYear: notebookRow.year
+        }
+      };
+
+      const createRes = await fetch(`${SUPABASE_URL}/rest/v1/report_jobs`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          box_id: 'north_star_notebook',
+          room: 'prep',
+          request_payload: { ...jobPayload, reportKind: 'north_star_notebook' }
+        })
+      });
+      const createdNotebookJob = (await createRes.json())?.[0];
+
+      if (createdNotebookJob && createdNotebookJob.id) {
+        try {
+          const invokeRes = await fetch(`${process.env.URL || 'https://sprightly-starburst-210796.netlify.app'}/generate-report-background`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId: createdNotebookJob.id })
+          });
+          if (invokeRes.status !== 202) {
+            console.error('Background function invocation returned unexpected status:', invokeRes.status);
+          }
+        } catch (err) {
+          console.error('Failed to invoke background function:', err);
+        }
+
+        return {
+          response: {
+            statusCode: 200, headers: corsHeaders(),
+            body: JSON.stringify({
+              message: 'Your North Star Notebook is being built. This is a long one — it usually takes several minutes. Feel free to check back.',
+              reportJobId: createdNotebookJob.id,
+              hasLogsToday: true
+            })
+          }
+        };
+      }
+      // If job creation failed for any reason, fall through to the normal
+      // synchronous path below rather than losing the request entirely.
     }
   }
 
