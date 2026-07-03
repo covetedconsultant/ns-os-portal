@@ -15,6 +15,14 @@
 // and can't require() an ES module file; this file uses a normal static import).
 // Extracted 2026-07-02 to kill the manual-sync problem flagged in this file's prior header
 // comment -- see project memory: project_chat_js_restructuring_plan.md.
+//
+// NORTH STAR NOTEBOOK (cs-17) branch added 2026-07-03 — see below. This is the ONLY
+// structural change to this file: the existing single-shared-Anthropic-call-then-branch
+// flow for weekly_plan / quarterly_review / vt_playbook is preserved EXACTLY as it was
+// (relocation discipline, not a rewrite — see ref-chat-js-architecture Section 1). The
+// Notebook branch is inserted as an early, self-contained return BEFORE that shared call,
+// since the Notebook does not use the shared single-call pattern at all — it makes its own
+// many sequential calls internally and never touches the existing flow below it.
 
 import type { Config } from "@netlify/functions";
 import {
@@ -24,7 +32,12 @@ import {
   extractQuarterly,
   writeQuarterlyReview,
   extractVTPlaybook,
-  wrapVTPlaybookInTemplate
+  wrapVTPlaybookInTemplate,
+  extractNotebookSection,
+  writeNotebookSection,
+  writeNotebookSynthesis,
+  renderNotebookHtml,
+  writeNotebookComplete
 } from "./lib/report-writers.mjs";
 
 const SUPABASE_URL = 'https://omjsqianefykbebnrdmp.supabase.co';
@@ -64,6 +77,25 @@ async function updateJob(jobId: string, fields: Record<string, any>) {
   });
 }
 
+// Single Anthropic call helper used ONLY by the new north_star_notebook branch
+// below (looped many times). The existing single-call flow further down in
+// this file is left exactly as it was — untouched, not routed through this
+// helper — per the "preserve behavior, relocate don't rewrite" discipline.
+async function callAnthropicForNotebook(systemPrompt: string, messages: any[], maxTokens: number) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_API_KEY as string, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages
+    })
+  });
+  if (!res.ok) throw new Error('Anthropic API error: ' + (await res.text()).slice(0, 500));
+  return res.json();
+}
+
 export default async (req: Request) => {
   const { jobId } = await req.json();
   if (!jobId) return; // background functions don't return responses to the client
@@ -88,6 +120,257 @@ export default async (req: Request) => {
     await updateJob(jobId, { status: 'processing' });
 
     const { systemPrompt, messages, boxLabel, meta, reportKind } = job.request_payload;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NORTH STAR NOTEBOOK (cs-17 synthesis stage) — added 2026-07-03
+    // ─────────────────────────────────────────────────────────────────────────
+    // Inserted here, BEFORE the shared single-Anthropic-call flow below, because
+    // the Notebook does not use that shared pattern at all — this branch makes
+    // its own ~20-27 sequential Anthropic calls internally and returns on its
+    // own, never falling through to the code beneath it. Everything from the
+    // "max_tokens is report-kind-aware" comment onward, to the end of this
+    // function, is UNCHANGED from the live file prior to this addition.
+    //
+    // ONE report_jobs entry per Notebook (job-scoping decision confirmed
+    // 2026-07-03, resolving the open item in LOG-cs-17 / REF-async-report-
+    // generation-standard — matches the single-job-per-report pattern used by
+    // weekly_plan/quarterly_review/vt_playbook below). Fail-fast, no partial
+    // completion: if ANY call or write fails, the job is marked 'error'
+    // immediately naming which step failed, and no further calls are
+    // attempted — consistent with REF-north-star-notebook-html-template's own
+    // "never render partially complete" rule. This governs the report_jobs
+    // done/error signal shown to the CLIENT only. Underneath, each section's
+    // scribed_output/analysis_output/measurable_goal is written to
+    // north_star_notebook_sections immediately after that section's call
+    // succeeds — so if the job dies partway through, everything generated up
+    // to that point is already persisted and does not need to be regenerated
+    // by a human inspecting the DB later, even though the client-facing retry
+    // will redo the AI calls from the top.
+    if (reportKind === 'north_star_notebook') {
+      const t0 = Date.now();
+      const maxTokensSection = 2048; // per-section calls are short: 2-4 sentence scribe pass + short analysis
+      const maxTokensPage = 4096;    // Vision/Closing Pattern/Growth-Evolution pages are longer, full-page narrative content
+
+      const { notebookId, sections, meta: notebookMeta } = job.request_payload as {
+        notebookId: string;
+        sections: Array<{
+          section_key: string;
+          arc_name: string;
+          raw_response: string;
+          gold_silver_bronze: string;
+          emotion: string;
+          intensity: string;
+          reason: string;
+        }>;
+        meta: { clientName?: string; companyName?: string; notebookYear?: number | string };
+      };
+
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      const sectionResultsByKey: Record<string, any> = {};
+
+      // ── Step 1: one combined scribe+analysis call per confirmed section ─────
+      for (const section of sections) {
+        const sectionPrompt =
+          'You are generating the North Star Notebook synthesis content for ONE section, ' +
+          'per REF-north-star-notebook-synthesis-templates Section 1 (the two-pass Scribe + ' +
+          'Chief of Staff Analysis pattern, combined here into one call per section).\n\n' +
+          'Section: ' + section.section_key + ' (Arc: ' + section.arc_name + ')\n' +
+          'Gold/Silver/Bronze: ' + section.gold_silver_bronze + '\n' +
+          'Emotion: ' + section.emotion + ' (Intensity: ' + section.intensity + ')\n' +
+          'Reason: ' + section.reason + '\n' +
+          'Raw captured response: ' + section.raw_response + '\n\n' +
+          'Produce BOTH passes for this section:\n' +
+          'Pass 1 (Scribe) — first person, 2-4 sentences, preserve every specific detail, no coaching or goal.\n' +
+          'Pass 2 (Chief of Staff Analysis) — open with the section\'s core principle if one applies, honor what ' +
+          'they declared, name the tension or opportunity from their specific details, propose ONE measurable ' +
+          'goal stated as a PROPOSAL awaiting confirmation (never as already locked).\n\n' +
+          'Output ONLY the following marker block, nothing else outside it:\n\n' +
+          '%%NOTEBOOK_SECTION%%{"scribed_output":"[Pass 1 text, escaped for JSON]",' +
+          '"analysis_output":"[Pass 2 text, escaped for JSON]","measurable_goal":"[proposed goal or null]"}%%END_NOTEBOOK_SECTION%%';
+
+        let data;
+        try {
+          data = await callAnthropicForNotebook(sectionPrompt, [{ role: 'user', content: 'Generate this section now.' }], maxTokensSection);
+        } catch (err) {
+          await updateJob(jobId, { status: 'error', error_message: 'Section ' + section.section_key + ' Anthropic call failed: ' + String(err).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+          return;
+        }
+        totalInputTokens += data.usage?.input_tokens ?? 0;
+        totalOutputTokens += data.usage?.output_tokens ?? 0;
+        const message = data.content?.[0]?.text || '';
+
+        const sectionData = extractNotebookSection(message);
+        if (!sectionData) {
+          await updateJob(jobId, { status: 'error', error_message: 'Section ' + section.section_key + ' failed to parse %%NOTEBOOK_SECTION%% block. Raw length: ' + message.length, input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+          return;
+        }
+
+        try {
+          await writeNotebookSection(sectionData, notebookId, section.section_key);
+        } catch (writeErr) {
+          await updateJob(jobId, { status: 'error', error_message: 'Section ' + section.section_key + ' write failed: ' + String(writeErr).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+          return;
+        }
+
+        sectionResultsByKey[section.section_key] = {
+          arc_name: section.arc_name,
+          section_key: section.section_key,
+          gold_silver_bronze: section.gold_silver_bronze,
+          emotion: section.emotion,
+          intensity: section.intensity,
+          reason: section.reason,
+          scribed_output: sectionData.scribed_output,
+          analysis_output: sectionData.analysis_output,
+          measurable_goal: sectionData.measurable_goal ?? null
+        };
+      }
+
+      // ── Step 2: Vision page (1 call) ─────────────────────────────────────────
+      const visionPrompt =
+        'You are generating the Vision page for a North Star Notebook, per ' +
+        'REF-north-star-notebook-synthesis-templates Section 2. Inputs: the Section 4B case study, ' +
+        'Section 6A defining moment, all five Freedoms (3A-3E), and the Section 2 revenue number, ' +
+        'drawn from the confirmed sections below. Follow the five-part structure exactly: ' +
+        '(1) Picture this, (2) Everyone knows what to do, (3) Why it works, (4) The math is manageable, ' +
+        '(5) The result.\n\n' + JSON.stringify(Object.values(sectionResultsByKey)) +
+        '\n\nOutput ONLY: %%NOTEBOOK_SECTION%%{"scribed_output":"[Vision page text, escaped for JSON]",' +
+        '"analysis_output":null,"measurable_goal":null}%%END_NOTEBOOK_SECTION%%';
+
+      let visionData;
+      try {
+        const data = await callAnthropicForNotebook(visionPrompt, [{ role: 'user', content: 'Generate the Vision page now.' }], maxTokensPage);
+        totalInputTokens += data.usage?.input_tokens ?? 0;
+        totalOutputTokens += data.usage?.output_tokens ?? 0;
+        const message = data.content?.[0]?.text || '';
+        visionData = extractNotebookSection(message);
+        if (!visionData) throw new Error('Failed to parse %%NOTEBOOK_SECTION%% block. Raw length: ' + message.length);
+      } catch (err) {
+        await updateJob(jobId, { status: 'error', error_message: 'Vision page failed: ' + String(err).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+        return;
+      }
+
+      // ── Step 3: Closing Pattern page (1 call) ────────────────────────────────
+      const closingPrompt =
+        'You are generating the Closing Pattern page for a North Star Notebook, per ' +
+        'REF-north-star-notebook-synthesis-templates Section 3. Scan the confirmed measurable_goal ' +
+        'fields below for repeated verbs, domains, or tensions — a structured scan, not a prose re-read. ' +
+        'The named limiting belief (Section 7, if present among these sections) must explicitly inform ' +
+        'the central pattern — never optional.\n\n' + JSON.stringify(Object.values(sectionResultsByKey)) +
+        '\n\nOutput ONLY: %%NOTEBOOK_SECTION%%{"scribed_output":"[Closing Pattern page text, escaped for JSON]",' +
+        '"analysis_output":null,"measurable_goal":null}%%END_NOTEBOOK_SECTION%%';
+
+      let closingData;
+      try {
+        const data = await callAnthropicForNotebook(closingPrompt, [{ role: 'user', content: 'Generate the Closing Pattern page now.' }], maxTokensPage);
+        totalInputTokens += data.usage?.input_tokens ?? 0;
+        totalOutputTokens += data.usage?.output_tokens ?? 0;
+        const message = data.content?.[0]?.text || '';
+        closingData = extractNotebookSection(message);
+        if (!closingData) throw new Error('Failed to parse %%NOTEBOOK_SECTION%% block. Raw length: ' + message.length);
+      } catch (err) {
+        await updateJob(jobId, { status: 'error', error_message: 'Closing Pattern page failed: ' + String(err).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+        return;
+      }
+
+      // ── Step 4: Growth/Evolution projections — up to 5 calls, one per Freedom (3A-3E) ──
+      // Per REF-north-star-notebook-synthesis-templates Section 4: classify each Freedom's
+      // confirmed Year-1 goal as Growth Step Function or Evolution Ladder (client's actual
+      // goal always overrides the per-Freedom default lean), then project Year 1/3/5.
+      const freedomKeys = ['3A', '3B', '3C', '3D', '3E'];
+      const projectionPieces: string[] = [];
+      for (const freedomKey of freedomKeys) {
+        const relevantSections = Object.values(sectionResultsByKey).filter((s: any) => s.section_key.startsWith(freedomKey));
+        if (relevantSections.length === 0) continue; // Freedom not present in this client's captured arcs — skip, do not error
+
+        const projectionPrompt =
+          'You are generating the 1/3/5-year Growth/Evolution projection for Freedom ' + freedomKey +
+          ' of a North Star Notebook, per REF-north-star-notebook-synthesis-templates Section 4. ' +
+          'First classify the confirmed goal as a Growth Step Function (countable) or Evolution Ladder ' +
+          '(transformational) — the client\'s actual stated goal always overrides the per-Freedom default ' +
+          'lean. State which type and why, briefly, then write 2-3 sentences per horizon (Year 1, Year 3, ' +
+          'Year 5), each ending with a measurable goal fitting that horizon.\n\n' +
+          JSON.stringify(relevantSections) +
+          '\n\nOutput ONLY: %%NOTEBOOK_SECTION%%{"scribed_output":"[Projection text for Freedom ' + freedomKey + ', escaped for JSON]",' +
+          '"analysis_output":null,"measurable_goal":null}%%END_NOTEBOOK_SECTION%%';
+
+        try {
+          const data = await callAnthropicForNotebook(projectionPrompt, [{ role: 'user', content: 'Generate the ' + freedomKey + ' projection now.' }], maxTokensPage);
+          totalInputTokens += data.usage?.input_tokens ?? 0;
+          totalOutputTokens += data.usage?.output_tokens ?? 0;
+          const message = data.content?.[0]?.text || '';
+          const projData = extractNotebookSection(message);
+          if (!projData) throw new Error('Failed to parse %%NOTEBOOK_SECTION%% block. Raw length: ' + message.length);
+          projectionPieces.push(projData.scribed_output);
+        } catch (err) {
+          await updateJob(jobId, { status: 'error', error_message: 'Growth/Evolution projection for Freedom ' + freedomKey + ' failed: ' + String(err).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+          return;
+        }
+      }
+      const projectionsHtml = projectionPieces.join('\n');
+
+      // ── Step 5: persist synthesis, render, mark complete ─────────────────────
+      try {
+        await writeNotebookSynthesis({
+          vision_page: visionData.scribed_output,
+          closing_pattern_page: closingData.scribed_output,
+          projections_html: projectionsHtml
+        }, notebookId);
+      } catch (writeErr) {
+        await updateJob(jobId, { status: 'error', error_message: 'Notebook synthesis write failed: ' + String(writeErr).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+        return;
+      }
+
+      // Group sections by arc_name, preserving first-seen order, for the
+      // template's {{#each arcs}} > {{#each sections}} nesting.
+      const arcsInOrder: string[] = [];
+      const arcMap: Record<string, any[]> = {};
+      for (const section of Object.values(sectionResultsByKey)) {
+        const s = section as any;
+        if (!arcMap[s.arc_name]) { arcMap[s.arc_name] = []; arcsInOrder.push(s.arc_name); }
+        arcMap[s.arc_name].push(s);
+      }
+      const arcs = arcsInOrder.map(arc_name => ({ arc_name, sections: arcMap[arc_name] }));
+
+      let renderedHtml;
+      try {
+        renderedHtml = await renderNotebookHtml({
+          user_name: notebookMeta?.clientName || 'Client',
+          company_name: notebookMeta?.companyName || '',
+          notebook_year: notebookMeta?.notebookYear || new Date().getFullYear(),
+          vision_html: visionData.scribed_output,
+          closing_pattern_html: closingData.scribed_output,
+          projections_html: projectionsHtml,
+          arcs
+        });
+      } catch (renderErr) {
+        await updateJob(jobId, { status: 'error', error_message: 'Notebook render failed: ' + String(renderErr).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+        return;
+      }
+
+      try {
+        await writeNotebookComplete(notebookId, renderedHtml);
+      } catch (writeErr) {
+        await updateJob(jobId, { status: 'error', error_message: 'Notebook completion write failed: ' + String(writeErr).slice(0, 400), input_tokens: totalInputTokens, output_tokens: totalOutputTokens, generation_ms: Date.now() - t0 });
+        return;
+      }
+
+      await updateJob(jobId, {
+        status: 'done',
+        result_html: renderedHtml,
+        result_title: 'North Star Notebook — ' + (notebookMeta?.notebookYear || new Date().getFullYear()),
+        completed_at: new Date().toISOString(),
+        input_tokens: totalInputTokens,
+        output_tokens: totalOutputTokens,
+        generation_ms: Date.now() - t0
+      });
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // END NORTH STAR NOTEBOOK BRANCH. Everything below this point is the
+    // ORIGINAL, UNCHANGED live logic for weekly_plan / quarterly_review /
+    // vt_playbook, preserved exactly as it was before this addition.
+    // ─────────────────────────────────────────────────────────────────────────
 
     // max_tokens is report-kind-aware (2026-07-02, revised): originally a flat 4096 for all
     // kinds, raised to 8192 after a real Weekly Plan build hit the 4096 cap mid-generation
