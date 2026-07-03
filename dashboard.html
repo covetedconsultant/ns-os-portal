@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-02-d-north-star-notebook-button -->
+  <!-- cache-bust: 2026-07-03-a-notebook-report-kind-wiring -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1913,7 +1913,8 @@ const REPORT_TYPE_LABELS = {
   weekly_plan: 'Weekly Plan',
   look_backward: 'Quarterly Review — Look Backward',
   look_forward: 'Quarterly Review — Look Forward',
-  vt_playbook: 'Virtual Team Playbook'
+  vt_playbook: 'Virtual Team Playbook',
+  north_star_notebook: 'North Star Notebook'
 };
 
 // ── VT BACKGROUND REPORT POLLING (Phase 3, 2026-07-02) ──────────────────
@@ -1953,7 +1954,8 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
       const kindMap = {
         weekly_plan:    { chatId: 'prep', reportType: 'weekly_plan',   readyLabel: 'Your Weekly Plan is ready' },
         look_backward:  { chatId: 'prep', reportType: 'look_backward', readyLabel: 'Your Look Backward report is ready' },
-        look_forward:   { chatId: 'prep', reportType: 'look_forward',  readyLabel: 'Your Look Forward report is ready' }
+        look_forward:   { chatId: 'prep', reportType: 'look_forward',  readyLabel: 'Your Look Forward report is ready' },
+        north_star_notebook: { chatId: 'prep', reportType: 'north_star_notebook', readyLabel: 'Your North Star Notebook is ready' }
       };
       const kind = kindMap[row.box_id] || { chatId: 'virtualteam', reportType: 'vt_playbook', readyLabel: 'Your playbook is ready' };
       appendMessage(messagesId, 'assistant', row.result_title ? kind.readyLabel + ' — **' + row.result_title + '**' : kind.readyLabel + '.', kind.chatId, row.result_html, kind.reportType);
@@ -1961,7 +1963,7 @@ async function pollVtReportJob(messagesId, jobId, placeholderRow) {
     }
     if (row.status === 'error') {
       placeholderRow.remove();
-      const errorLabelMap = { weekly_plan: 'Weekly Plan', look_backward: 'Look Backward report', look_forward: 'Look Forward report' };
+      const errorLabelMap = { weekly_plan: 'Weekly Plan', look_backward: 'Look Backward report', look_forward: 'Look Forward report', north_star_notebook: 'North Star Notebook' };
       const errorLabel = errorLabelMap[row.box_id] || 'playbook';
       appendMessage(messagesId, 'assistant', 'Something went wrong building your ' + errorLabel + '. Please try again — if this keeps happening, let your Chief of Staff know.');
       console.error('Report job errored:', row.error_message);
