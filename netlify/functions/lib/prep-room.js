@@ -34,9 +34,10 @@
 // the AI has no Supabase tool access inside chat.js.
 //
 // Button phrases (from dashboard.html prefill-btn onclick values):
-//   'My weekly check-in.'               → cs-15 (was tr-2 — tr-2 retired 2026-07-01, see LOG-cs-15)
-//   "I'd like to do my quarterly review." → menu-quarterly-review-prep
-//   anything else                        → chat-c (shows A/B menu)
+//   'My weekly check-in.'                     → cs-15 (was tr-2 — tr-2 retired 2026-07-01, see LOG-cs-15)
+//   "I'd like to do my quarterly review."      → menu-quarterly-review-prep
+//   "I'd like to build my North Star Notebook." → cs-17 (added 2026-07-03, see LOG-cs-17)
+//   anything else                              → chat-c (shows A/B menu)
 function detectPrepRoute(messages) {
   if (!messages || messages.length === 0) return 'chat-c';
   const firstUserMsg = messages.find(m => m.role === 'user');
@@ -47,6 +48,9 @@ function detectPrepRoute(messages) {
   }
   if (text.includes('quarterly review')) {
     return 'menu-quarterly-review-prep';
+  }
+  if (text.includes('north star notebook')) {
+    return 'cs-17';
   }
   return 'chat-c';
 }
@@ -169,6 +173,24 @@ async function handlePrepRoom({ messages, context, userName, userId }, deps) {
     // will actually be triggered, but both markers are safe to have available.
     systemPrompt += buildQuarterlyOutputBlock('look_backward');
     systemPrompt += buildQuarterlyOutputBlock('look_forward');
+  } else if (prepRoute === 'cs-17') {
+    // North Star Notebook (added 2026-07-03, see LOG-cs-17). Conversational
+    // phase only — Step 0 governing REF is loaded upfront per the same
+    // full-chain-injection pattern used above, so the AI never needs a
+    // mid-conversation Supabase fetch. Deliberately NO output-override block
+    // and NO background-build trigger here: cs-17's synthesis stage (Step 3)
+    // depends on the job-scoping question left open in LOG-cs-17 and
+    // REF-async-report-generation-standard, and this handoff's scope is the
+    // button + routing only. Do not add a %%NORTH_STAR_NOTEBOOK%% marker or a
+    // background trigger block until that question is resolved and a REF
+    // defines the actual output contract chat.js should act on.
+    const [cs17Prompt, refNotebookConvStd] = await Promise.all([
+      getPrompt('cs-17'),
+      getPrompt('REF-north-star-notebook-conversation-standard')
+    ]);
+    if (!cs17Prompt) return { response: { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'cs-17 prompt not found in Supabase' }) } };
+    systemPrompt = cs17Prompt;
+    if (refNotebookConvStd) systemPrompt += '\n\n---\n\n## REF — NORTH STAR NOTEBOOK CONVERSATION STANDARD\n\n[SYSTEM: This document has been loaded into this session by chat.js. The AI does not need to fetch it.]\n\n' + refNotebookConvStd;
   } else {
     // Ambiguous — show A/B menu via chat-c
     const chatCPrompt = await getPrompt('chat-c');
@@ -179,12 +201,15 @@ async function handlePrepRoom({ messages, context, userName, userId }, deps) {
     const csReceiptPrompt = await getPrompt('cs-receipt');
     if (csReceiptPrompt) {
       const roomLabel = prepRoute === 'cs-15' ? 'Prep Room — Weekly Plan' :
-                        prepRoute === 'menu-quarterly-review-prep' ? 'Prep Room — Quarterly Review' : 'Prep Room';
+                        prepRoute === 'menu-quarterly-review-prep' ? 'Prep Room — Quarterly Review' :
+                        prepRoute === 'cs-17' ? 'Prep Room — North Star Notebook' : 'Prep Room';
       const triggerCtx = prepRoute === 'cs-15' ? 'weekly_plan' :
-                         prepRoute === 'menu-quarterly-review-prep' ? 'quarterly_review' : 'prep_room';
+                         prepRoute === 'menu-quarterly-review-prep' ? 'quarterly_review' :
+                         prepRoute === 'cs-17' ? 'north_star_notebook' : 'prep_room';
       // CS-15 and quarterly reviews are their own receipt (see CS-15 Section 7 / CS-13-14
       // "Does NOT hand off to CS-Receipt" logic) — skip the RECEIPT close block for those,
-      // matching the protocols' own stated dependency rules.
+      // matching the protocols' own stated dependency rules. cs-17 Section 6 states it
+      // DOES hand off to CS-Receipt at close (Step 5), so it is NOT excluded here.
       if (prepRoute !== 'cs-15' && prepRoute !== 'menu-quarterly-review-prep') {
         systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, { triggerContext: triggerCtx, roomsVisited: roomLabel });
       }
