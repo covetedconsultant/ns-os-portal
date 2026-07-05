@@ -203,4 +203,36 @@ SELECT * FROM annual_operating_picture WHERE user_id = '[UUID]' ORDER BY created
 **Direct URL:** https://evenbetterconsulting.activehosted.com/app/builder/259
 **Status:** Active
 **Trigger:** Contact subscribes to list "NS OS Chief of Staff Customers"
-**Steps:** Send email ("Your Chief of Staff account is being set up") → Subscribe to Coveted Consultant Customer Lis
+**Steps:** Send email ("Your Chief of Staff account is being set up") → Subscribe to Coveted Consultant Customer List
+**Stats as of June 8, 2026:** 4 sent, 25% open rate
+
+This automation IS live. Search for "chief of staff" — the name doesn't contain "north star."
+
+### Google Docs — Skill File IDs (Legacy Drive Archive)
+
+| Skill | Google Doc ID |
+|-------|---------------|
+| CS-1 Morning Meeting | 1NUUDFXtUnBvh6RCpwUqVRfhDjT5EwkbqWCrofcNQKj4 |
+| CS-9 Recommendations Response | 124zoyUZh6EmwCdMrvysOPOTk1y0UA28sqAVYQxQRN5k |
+| CS-11 Trial Onboarding | 1fpOPcEZh8Z2a4XZ7Nv2RCpjRVi9BTHkYJdlgo8IGMtI |
+| CS-12 Returning User | 10xeV8vLGseMsrrKqAgTVibv_GGomh5-tSMl9I9fKToc |
+| CS-Receipt | 1O2OK8Cgeh4zuGSi72I8dLhlpYdmDzE_yfeRQ5sOE9qg |
+| CS-4 Weekly Infrastructure | 1B7mZZyPMk5nd2OmSOi5EZZhupzXjZcJ2dDwyTqfkupE |
+| CS-5 Weekly Observation | 1ouJJDrI28KFbMEbm5HmvN1Nb0fxkMJ0kFTKhmP01HZw |
+| TR-2 Weekly Planning | 1znjkpQv6ijwr_c8qXqFRSPtFzz-RmtTU_mVO2OLMWcs |
+| PDF/HTML Design Standard | 1aEM4ebGds7rqcyr7FnD48A3D7Vf2r22L8JI3Bwps2x0 |
+
+### Pickaxe — Quick Reference (Sunset in Progress)
+
+- `pickaxe_ns_os_api_key` — pull from Supabase config table
+- Chat A: JS2WSIYJIB | Chat B: 5CIK00E4S5 | Chat C: 5XUR5WHCWF
+
+### Real Clients in Pickaxe (no Supabase profiles yet)
+
+- tregammage@gmail.com (238 uses)
+- chawkins@chawkinslaw.com (55 uses)
+- stefan.meier@meierup.com
+- taylor@covetedconsultant.com
+- fran@uprightcommunications.com
+
+Create `profiles` rows before these clients can use Supabase-dependent features.
