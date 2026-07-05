@@ -116,7 +116,11 @@ When the session is execution, use these references:
 | GitHub token | Supabase config table, key = `github_token` |
 | Anthropic API key | Supabase config table, key = `ns-os-custom-build` |
 
-**Deploy workflow:** Push via `mcp__github__push_files` → Netlify auto-deploys in ~10 seconds. No manual steps.
+**Deploy workflow:** As of 2026-07-04, the Claude GitHub MCP connector (`api.githubcopilot.com/mcp`) is confirmed broken for writes — it authenticates and reads fine, but every write call (`create_or_update_file`, `push_files`) returns `403 Resource not accessible by integration`. GitHub's own Authorized GitHub Apps page confirms the app has only ever been OAuth-authorized, never actually installed — a full disconnect/revoke/reconnect cycle did not fix it. Treat this as a known Anthropic-side connector gap, not a local misconfiguration.
+
+**Until that connector is fixed, push via direct sandbox PUT to the GitHub Contents API** (per ERR-NET-11 in REF-ERRORS.md): read the target file fresh from disk, base64-encode it in the sandbox, and `curl -X PUT` to `https://api.github.com/repos/covetedconsultant/ns-os-portal/contents/[path]` using `Authorization: Bearer [token]`, with the token pulled fresh from Supabase `config` table key `github_token`. Never hand-type or reconstruct file content — always read fresh from disk immediately before the push. After every push, verify by fetching the file back and confirming byte-for-byte match against the local source (see ERR-NET-9, ERR-NET-11 for why this check matters). Netlify still auto-deploys off the GitHub push in ~10 seconds — no manual step there.
+
+Periodically retest whether `mcp__github__push_files` works again after an Anthropic-side fix; revert to it once confirmed.
 
 **Visual changes rule:** For any CSS or layout change to dashboard.html, build and verify in a Cowork artifact first before pushing. Logic, routing, and data changes (chat.js, Supabase queries) push directly — no artifact needed.
 
@@ -132,7 +136,7 @@ When the session is execution, use these references:
 ### MCP Connections
 
 - **Supabase MCP** — connected to project `omjsqianefykbebnrdmp`
-- **GitHub MCP** — use `mcp__github__push_files` to deploy
+- **GitHub MCP** — reads fine; writes currently broken (see Deploy Workflow above). Use sandbox-direct PUT for all pushes until fixed.
 - **Zapier MCP** — connected to Alzay's Zapier account
 - **ActiveCampaign MCP** — contact/list/automation management
 - **Google Drive MCP** — reading/editing Drive skill files
@@ -199,36 +203,4 @@ SELECT * FROM annual_operating_picture WHERE user_id = '[UUID]' ORDER BY created
 **Direct URL:** https://evenbetterconsulting.activehosted.com/app/builder/259
 **Status:** Active
 **Trigger:** Contact subscribes to list "NS OS Chief of Staff Customers"
-**Steps:** Send email ("Your Chief of Staff account is being set up") → Subscribe to Coveted Consultant Customer List
-**Stats as of June 8, 2026:** 4 sent, 25% open rate
-
-This automation IS live. Search for "chief of staff" — the name doesn't contain "north star."
-
-### Google Docs — Skill File IDs (Legacy Drive Archive)
-
-| Skill | Google Doc ID |
-|-------|---------------|
-| CS-1 Morning Meeting | 1NUUDFXtUnBvh6RCpwUqVRfhDjT5EwkbqWCrofcNQKj4 |
-| CS-9 Recommendations Response | 124zoyUZh6EmwCdMrvysOPOTk1y0UA28sqAVYQxQRN5k |
-| CS-11 Trial Onboarding | 1fpOPcEZh8Z2a4XZ7Nv2RCpjRVi9BTHkYJdlgo8IGMtI |
-| CS-12 Returning User | 10xeV8vLGseMsrrKqAgTVibv_GGomh5-tSMl9I9fKToc |
-| CS-Receipt | 1O2OK8Cgeh4zuGSi72I8dLhlpYdmDzE_yfeRQ5sOE9qg |
-| CS-4 Weekly Infrastructure | 1B7mZZyPMk5nd2OmSOi5EZZhupzXjZcJ2dDwyTqfkupE |
-| CS-5 Weekly Observation | 1ouJJDrI28KFbMEbm5HmvN1Nb0fxkMJ0kFTKhmP01HZw |
-| TR-2 Weekly Planning | 1znjkpQv6ijwr_c8qXqFRSPtFzz-RmtTU_mVO2OLMWcs |
-| PDF/HTML Design Standard | 1aEM4ebGds7rqcyr7FnD48A3D7Vf2r22L8JI3Bwps2x0 |
-
-### Pickaxe — Quick Reference (Sunset in Progress)
-
-- `pickaxe_ns_os_api_key` — pull from Supabase config table
-- Chat A: JS2WSIYJIB | Chat B: 5CIK00E4S5 | Chat C: 5XUR5WHCWF
-
-### Real Clients in Pickaxe (no Supabase profiles yet)
-
-- tregammage@gmail.com (238 uses)
-- chawkins@chawkinslaw.com (55 uses)
-- stefan.meier@meierup.com
-- taylor@covetedconsultant.com
-- fran@uprightcommunications.com
-
-Create `profiles` rows before these clients can use Supabase-dependent features.
+**Steps:** Send email ("Your Chief of Staff account is being set up") → Subscribe to Coveted Consultant Customer Lis
