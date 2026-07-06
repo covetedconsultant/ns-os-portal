@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-03-a-notebook-report-kind-wiring -->
+  <!-- cache-bust: 2026-07-06-a-brief-silent-prefetch-chip-hierarchy -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -206,6 +206,17 @@
     .prefill-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 660px; }
     .prefill-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
     .prefill-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
+    /* Daily Work chip hierarchy (2026-07-06, addendum 3) — the North Star Brief
+       chip sits alone on its own row with emphasized styling (gold border,
+       gold text) since it's no longer auto-displayed; "talk it through" and
+       "build a playbook" sit as an equal pair beneath it. The former fourth
+       "View my dashboard" chip is removed entirely — dashboard access still
+       exists via the sidebar nav, so nothing is lost, just de-duplicated. */
+    .prefill-btns-stack { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 660px; }
+    .prefill-btn-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .prefill-btn-primary { font-size: 13px; font-weight: 600; padding: 8px 20px; border: 1.5px solid var(--gold); border-radius: 20px; background: var(--gold-bg); color: var(--gold); cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
+    .prefill-btn-primary:hover { background: var(--gold); color: #fff; }
+    .chat-start-hint { font-size: 12px; color: var(--text2); text-align: center; margin-bottom: 2px; }
     /* North Star Brief offer buttons (2026-07-06) — distinct from .prefill-btn's
        short fixed-phrase chip style. These carry full generated sentences
        (cs-1's real offers run 100-200+ characters), so they need to wrap and
@@ -826,14 +837,18 @@
         <div class="chat-greeting">
           <div class="chat-greeting-line1">Good to see you, <span class="name" id="greeting-name-chat">—</span>.</div>
           <div class="chat-greeting-line2">What are we working on today?</div>
+          <div class="chat-start-hint">Want to get started? Click North Star brief.</div>
         </div>
       </div>
       <div class="chat-input-area">
-        <div class="prefill-btns" id="prefill-chat">
-          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to see my North Star brief.')">I'd like to see my North Star brief.</button>
-          <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to talk something through.')">I'd like to talk something through.</button>
-          <button class="prefill-btn" onclick="switchView('virtualteam')">I'd like to build a Virtual Team playbook.</button>
-          <button class="prefill-btn" onclick="switchView('home')">View my dashboard.</button>
+        <div class="prefill-btns-stack" id="prefill-chat">
+          <div class="prefill-btn-row">
+            <button class="prefill-btn-primary" onclick="showDailyBrief()">I'd like to see my North Star brief.</button>
+          </div>
+          <div class="prefill-btn-row">
+            <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to talk something through.')">I'd like to talk something through.</button>
+            <button class="prefill-btn" onclick="switchView('virtualteam')">I'd like to build a Virtual Team playbook.</button>
+          </div>
         </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -1257,30 +1272,59 @@ async function triggerAutoStart() {
 }
 
 // ── NORTH STAR BRIEF — AUTO-FIRE (2026-07-06) ─────────────────────────
-// Fired once on landing when app.js routes a returning user to
-// dashboard.html?view=chat&autobrief=true. Shares the exact same
-// lookup-or-generate path as the manual "I'd like to see my North Star
-// brief" chip — this request is marked autobrief:true and chat.js/
-// daily-brief-room.js do the rest. No user-message bubble is shown (nothing
-// was typed), only the assistant's reply once it arrives.
-let autoBriefFired = false;
-async function triggerAutoBrief() {
-  if (autoBriefFired) return;
-  autoBriefFired = true;
-  const messagesId = 'messages';
-  const sendBtn = document.getElementById('send-btn');
-  if (sendBtn) sendBtn.disabled = true;
-  const typingEl = appendTyping(messagesId);
-  try {
+// ── NORTH STAR BRIEF: SILENT PREFETCH + CLICK-TO-DISPLAY (2026-07-06, addendum 3) ──
+// The brief no longer auto-displays into the chat on landing. Instead:
+//   1. The moment the Daily Work room is entered empty, prefetchDailyBrief()
+//      fires silently in the background — same lookup-or-generate path as
+//      before (marked autobrief:true so chat.js/daily-brief-room.js resolve
+//      today's brief, generating fresh only on a real miss). Nothing is
+//      appended to the DOM by this step. This preserves the "one brief per
+//      day" guarantee even though display is now click-triggered.
+//   2. dailyBriefPrefetch holds the in-flight/settled promise. showDailyBrief()
+//      (wired to the brief chip's onclick) awaits it: if it's still pending,
+//      a typing indicator covers the wait; once resolved, the brief displays
+//      through the exact same render pipeline the old auto-fire used
+//      (processReceiptBlock -> parseBriefHelpOffers -> renderBriefOfferButtons).
+// A hard refresh mid-conversation re-empties the room and re-fires the
+// prefetch — same accepted limitation carried over from addendum 2.
+let dailyBriefPrefetch = null;
+let dailyBriefDisplayed = false;
+
+function prefetchDailyBrief() {
+  if (dailyBriefPrefetch) return dailyBriefPrefetch;
+  dailyBriefPrefetch = (async () => {
     const context = await buildContext();
     const res = await fetch(API_ENDPOINT, {
       method: 'POST', headers: chatApiHeaders(),
       body: JSON.stringify({ messages: [], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'chat', autobrief: true })
     });
-    typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
-    const rawReply = data.message || 'Something went wrong.';
+    return data.message || 'Something went wrong.';
+  })();
+  // Swallow rejections here so an unawaited background failure doesn't
+  // surface as an unhandled promise rejection before the user ever clicks
+  // the chip — showDailyBrief() below does its own try/catch on await.
+  dailyBriefPrefetch.catch(() => {});
+  return dailyBriefPrefetch;
+}
+
+// Wired to the North Star Brief chip's onclick. Shows the brief once the
+// prefetch (started silently by switchView on room entry) resolves — with a
+// quiet typing indicator covering any wait if the user clicks before it's
+// ready. Falls back to starting the fetch itself if no prefetch is in
+// flight yet (e.g. prefetch failed silently, or this is somehow the first
+// call), so the chip always works even if the background path didn't fire.
+async function showDailyBrief() {
+  if (dailyBriefDisplayed) return;
+  const messagesId = 'messages';
+  const sendBtn = document.getElementById('send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  const typingEl = appendTyping(messagesId);
+  try {
+    const rawReply = await prefetchDailyBrief();
+    typingEl.remove();
+    dailyBriefDisplayed = true;
     const { displayText } = await processReceiptBlock(rawReply, messagesId);
     const { strippedText, offers } = parseBriefHelpOffers(displayText);
     const rowEl = appendMessage(messagesId, 'assistant', strippedText, 'chat');
@@ -1289,7 +1333,9 @@ async function triggerAutoBrief() {
   } catch (err) {
     typingEl.remove();
     appendMessage(messagesId, 'assistant', 'Connection error. Please try again.', 'chat');
-    console.error('Auto-brief error:', err);
+    console.error('Daily brief display error:', err);
+    // Allow a retry on the next click rather than permanently failing.
+    dailyBriefPrefetch = null;
   }
   if (sendBtn) sendBtn.disabled = false;
 }
@@ -1929,16 +1975,20 @@ function switchView(name) {
     initReceiptDatePicker();
     loadReceiptsView();
   }
-  // North Star Brief auto-fire (2026-07-06, addendum 2): the trigger is now
-  // "the Daily Work room is empty at the moment it's entered" — not "arrived
-  // via a URL flag". Covers every entry path uniformly (login redirect,
-  // sidebar click, or anything else that calls switchView('chat')) with the
-  // same single check. If the room already has messages, do nothing — just
-  // show what's there. No persistence across a hard refresh is added here;
-  // a mid-conversation refresh emptying the room and the brief re-firing as
-  // a result is a known, accepted limitation for now.
+  // North Star Brief silent prefetch (2026-07-06, addendum 3 — supersedes
+  // addendum 2's auto-DISPLAY): the trigger is still "the Daily Work room is
+  // empty at the moment it's entered", covering every entry path uniformly
+  // (login redirect, sidebar click, or anything else that calls
+  // switchView('chat')). What changed is what firing DOES — it now only
+  // kicks off prefetchDailyBrief() in the background (today's brief is
+  // looked up or generated silently, same lookup-or-generate path as
+  // before) with nothing appended to the DOM. Nothing is shown until the
+  // user clicks the North Star Brief chip, which calls showDailyBrief().
+  // No persistence across a hard refresh is added here; a mid-conversation
+  // refresh emptying the room and the prefetch re-firing as a result is a
+  // known, accepted limitation for now.
   if (name === 'chat' && chatHistories.chat.length === 0) {
-    triggerAutoBrief();
+    prefetchDailyBrief();
   }
 }
 function handleCoachingClick() {
