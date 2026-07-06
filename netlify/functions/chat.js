@@ -425,7 +425,7 @@ async function checkAndWritePartialReceipt(userId, room) {
       trigger_context: 'auto_partial',
       outcome_type: 'session_cut_short',
       thread_tag: fields.thread_tag,
-      rooms_visited: room === 'chat' ? 'Daily Brief' : room === 'prep' ? 'Prep Room' : 'Setup',
+      rooms_visited: room === 'chat' ? 'Daily Work' : room === 'prep' ? 'Prep Room' : 'Setup',
       carried_forward: 'Session ended without a receipt — context preserved above'
     };
     const writeRes = await fetch(`${SUPABASE_URL}/rest/v1/session_receipts`, {
