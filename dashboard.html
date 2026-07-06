@@ -523,7 +523,7 @@
   </div>
   <div class="nav-btn" id="nav-chat" onclick="switchView('chat')">
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    <div class="tooltip">Daily Brief</div>
+    <div class="tooltip">North Star Brief</div>
   </div>
   <div class="nav-btn" id="nav-prep" onclick="switchView('prep')">
     <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
@@ -574,7 +574,7 @@
         <div class="home-section-label">Start a conversation</div>
         <div class="nav-cards-grid">
           <div class="nav-card" onclick="switchView('setup')"><div class="nav-card-icon">⚙️</div><div><div class="nav-card-title">Your Setup</div><div class="nav-card-desc">Build or update your operating picture.</div></div></div>
-          <div class="nav-card" onclick="switchView('chat')"><div class="nav-card-icon">✦</div><div><div class="nav-card-title">Daily Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div></div>
+          <div class="nav-card" onclick="switchView('chat')"><div class="nav-card-icon">✦</div><div><div class="nav-card-title">North Star Brief</div><div class="nav-card-desc">Work through today with your Chief of Staff.</div></div></div>
           <div class="nav-card" onclick="switchView('prep')"><div class="nav-card-icon">📖</div><div><div class="nav-card-title">Prep Room</div><div class="nav-card-desc">Prepare for what's ahead.</div></div></div>
           <div class="nav-card" onclick="switchView('virtualteam')"><div class="nav-card-icon">⚇</div><div><div class="nav-card-title">Virtual Team</div><div class="nav-card-desc">Build a playbook with your virtual team.</div></div></div>
         </div>
@@ -759,7 +759,7 @@
           <!-- 8. Bottom buttons -->
           <div class="btn-row">
             <button class="btn-nav btn-reset" onclick="switchView('setup')">Restart Setup</button>
-            <button class="btn-nav btn-brief" onclick="switchView('chat')">Daily Brief</button>
+            <button class="btn-nav btn-brief" onclick="switchView('chat')">North Star Brief</button>
             <button class="btn-nav btn-prep" onclick="switchView('prep')">Prep Room</button>
           </div>
 
@@ -798,7 +798,7 @@
     <div class="chat-wrap">
       <div class="chat-header">
         <div class="chat-header-icon">✦</div>
-        <div><div class="chat-header-title">Daily Brief</div><div class="chat-header-sub">Chief of Staff — direct line ✓</div></div>
+        <div><div class="chat-header-title">North Star Brief</div><div class="chat-header-sub">Chief of Staff — direct line ✓</div></div>
         <button class="chat-header-history-btn" onclick="toggleHistory()" title="Chat history">
           <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
         </button>
@@ -814,6 +814,7 @@
           <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to see my North Star brief.')">I'd like to see my North Star brief.</button>
           <button class="prefill-btn" onclick="prefillChat('chat','I\'d like to talk something through.')">I'd like to talk something through.</button>
           <button class="prefill-btn" onclick="switchView('virtualteam')">I'd like to build a Virtual Team playbook.</button>
+          <button class="prefill-btn" onclick="switchView('home')">View my dashboard.</button>
         </div>
         <div class="chat-input-wrap">
           <textarea class="chat-input" id="chat-input" placeholder="Ask your Chief of Staff…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -941,7 +942,7 @@
         <select id="admin-filter-room">
           <option value="">All rooms</option>
           <option value="setup">Your Setup</option>
-          <option value="chat">Daily Brief</option>
+          <option value="chat">North Star Brief</option>
           <option value="prep">Prep Room</option>
         </select>
         <select id="admin-filter-date">
@@ -1010,7 +1011,7 @@ function getStoredHistory() {
 function saveSessionToHistory(chatId, firstUserMsg, firstAssistantMsg) {
   const history = getStoredHistory();
   const now = new Date();
-  const label = { setup: 'Your Setup', chat: 'Daily Brief', prep: 'Prep Room' }[chatId] || chatId;
+  const label = { setup: 'Your Setup', chat: 'North Star Brief', prep: 'Prep Room' }[chatId] || chatId;
   const title = firstUserMsg
     ? (firstUserMsg.length > 40 ? firstUserMsg.slice(0, 40) + '…' : firstUserMsg)
     : (firstAssistantMsg ? label + ' session' : label);
@@ -1186,6 +1187,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', window.location.pathname);
     switchView('setup');
     setTimeout(() => triggerAutoStart(), 600);
+  } else if (urlParams.get('view') === 'chat' && urlParams.get('autobrief') === 'true') {
+    // North Star Brief as the post-onboarding landing experience (2026-07-06).
+    // app.js sends returning users here instead of plain dashboard.html. Same
+    // switchView('chat') the nav-card onclick already uses — just fired on load
+    // instead of waiting for a click.
+    window.history.replaceState({}, '', window.location.pathname);
+    switchView('chat');
+    setTimeout(() => triggerAutoBrief(), 300);
   } else {
     if (typeof restoreConversationThread === 'function') {
       restoreConversationThread('chat');
@@ -1223,6 +1232,100 @@ async function triggerAutoStart() {
     console.error('Auto-start error:', err);
   }
   if (sendBtn) sendBtn.disabled = false;
+}
+
+// ── NORTH STAR BRIEF — AUTO-FIRE (2026-07-06) ─────────────────────────
+// Fired once on landing when app.js routes a returning user to
+// dashboard.html?view=chat&autobrief=true. Shares the exact same
+// lookup-or-generate path as the manual "I'd like to see my North Star
+// brief" chip — this request is marked autobrief:true and chat.js/
+// daily-brief-room.js do the rest. No user-message bubble is shown (nothing
+// was typed), only the assistant's reply once it arrives.
+let autoBriefFired = false;
+async function triggerAutoBrief() {
+  if (autoBriefFired) return;
+  autoBriefFired = true;
+  const messagesId = 'messages';
+  const sendBtn = document.getElementById('send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  const typingEl = appendTyping(messagesId);
+  try {
+    const context = await buildContext();
+    const res = await fetch(API_ENDPOINT, {
+      method: 'POST', headers: chatApiHeaders(),
+      body: JSON.stringify({ messages: [], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'chat', autobrief: true })
+    });
+    typingEl.remove();
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const rawReply = data.message || 'Something went wrong.';
+    const { displayText } = await processReceiptBlock(rawReply, messagesId);
+    const { strippedText, offers } = parseBriefHelpOffers(displayText);
+    const rowEl = appendMessage(messagesId, 'assistant', strippedText, 'chat');
+    renderBriefOfferButtons(rowEl, offers, 'chat');
+    chatHistories['chat'].push({ role: 'assistant', content: displayText });
+  } catch (err) {
+    typingEl.remove();
+    appendMessage(messagesId, 'assistant', 'Connection error. Please try again.', 'chat');
+    console.error('Auto-brief error:', err);
+  }
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+// Parses the three numbered lines under "How I Can Help Right Now" out of a
+// North Star Brief reply. Returns { strippedText, offers: [string,string,string] }
+// — offers is empty if the section isn't found (e.g. a cs-16 reply, or a brief
+// that skipped straight to something else). strippedText has the raw numbered
+// list removed since it's re-rendered as buttons instead of plain text.
+function parseBriefHelpOffers(text) {
+  const headerRe = /\*\*How I Can Help Right Now\*\*|How I Can Help Right Now/;
+  const headerMatch = text.match(headerRe);
+  if (!headerMatch) return { strippedText: text, offers: [] };
+  const afterHeader = text.slice(headerMatch.index + headerMatch[0].length);
+  // Match up to three numbered lines (1./2./3.) — stop at the closing question
+  // or end of the numbered run, whichever comes first.
+  const lineRe = /^\s*(\d)[\.\)]\s*(.+)$/gm;
+  const offers = [];
+  let match;
+  const matchedSpans = [];
+  while ((match = lineRe.exec(afterHeader)) && offers.length < 3) {
+    offers.push(match[2].trim());
+    matchedSpans.push(match);
+  }
+  if (offers.length === 0) return { strippedText: text, offers: [] };
+  // Remove the header line and the three numbered offer lines from the
+  // displayed text — they're re-rendered as buttons below the bubble instead.
+  const lastSpan = matchedSpans[matchedSpans.length - 1];
+  const beforeHeader = text.slice(0, headerMatch.index);
+  const afterOffers = afterHeader.slice(lastSpan.index + lastSpan[0].length);
+  const strippedText = (beforeHeader + afterOffers).replace(/\n{3,}/g, '\n\n').trim();
+  return { strippedText, offers };
+}
+
+// Renders the three parsed offers as buttons under the brief bubble. Clicking
+// sends back ONLY the short signal ("1"/"2"/"3") — the exact signal
+// cs9ShouldLoad (daily-brief-room.js) already recognizes — never the full
+// sentence, so the existing CS-9 confirm-and-handoff logic doesn't need to change.
+function renderBriefOfferButtons(rowEl, offers, chatId) {
+  if (!offers || offers.length === 0) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'brief-offer-btns';
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:10px;';
+  offers.forEach((offerText, i) => {
+    const signal = String(i + 1);
+    const btn = document.createElement('button');
+    btn.className = 'prefill-btn brief-offer-btn';
+    btn.textContent = offerText;
+    btn.onclick = () => {
+      const inputId = chatId === 'chat' ? 'chat-input' : 'chat-input-' + chatId;
+      const input = document.getElementById(inputId);
+      if (input) input.value = signal;
+      sendMessage(chatId);
+    };
+    wrap.appendChild(btn);
+  });
+  const msgDiv = rowEl.querySelector('.msg.assistant');
+  if (msgDiv) msgDiv.appendChild(wrap);
 }
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────
@@ -1853,7 +1956,16 @@ async function sendMessage(chatId) {
     // %%WEEKLY_PLAN%%/%%QUARTERLY%% marker fired server-side — see chat.js.
     // Two different things arriving on the same response — receiptNumber and
     // reportHtml are handled independently, not conflated.
-    appendMessage(messagesId, 'assistant', displayText, chatId, data.reportHtml || null, data.reportType || null);
+    // North Star Brief offer buttons (2026-07-06): only the Daily Brief room's
+    // replies carry a "How I Can Help Right Now" section to parse — other rooms
+    // render normally, untouched.
+    if (chatId === 'chat') {
+      const { strippedText, offers } = parseBriefHelpOffers(displayText);
+      const rowEl = appendMessage(messagesId, 'assistant', strippedText, chatId, data.reportHtml || null, data.reportType || null);
+      renderBriefOfferButtons(rowEl, offers, chatId);
+    } else {
+      appendMessage(messagesId, 'assistant', displayText, chatId, data.reportHtml || null, data.reportType || null);
+    }
     chatHistories[chatId].push({ role: 'assistant', content: displayText });
     if (receiptNumber) console.log('Receipt written:', receiptNumber);
     // reportJobId (Phase 3, 2026-07-02): VT background build kicked off server-side
