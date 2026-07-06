@@ -555,6 +555,22 @@ exports.handler = async (event) => {
         await writeUserMessageLog(userId, roomName, lastUserMsg.content, sessionKey);
       }
     }
+    // The silent North Star Brief prefetch (autobrief:true) sends messages:[] —
+    // no user turn exists to log above, so sessionKey stays null and the
+    // "WRITE ASSISTANT MESSAGE AFTER ANTHROPIC RESPONSE" block further down
+    // (gated on `if (sessionKey && lastUserMsg)`) never fires for the brief's
+    // own reply. That leaves the brief permanently absent from conversation_logs,
+    // so loadRecentThread's later reload of convoMessages silently comes back
+    // missing the brief on any later turn in the same room (e.g. a numbered
+    // offer-button click) — confirmed 2026-07-06 investigating a live
+    // "Connection error" report. Fix: set sessionKey here too, specifically for
+    // this one case, so the assistant-log write below still fires even with no
+    // preceding user turn. Scoped tightly (room==='chat' && autobrief && userId)
+    // so no other room's behavior changes.
+    if (!sessionKey && userId && room === 'chat' && autobrief) {
+      const today = new Date().toISOString().slice(0, 10);
+      sessionKey = `${userId}-${today}-chat`;
+    }
 
     // ── DAILY BRIEF active memory ────────────────────────────────────────────
     // Only the Daily Brief (room='chat') holds the rolling N-day verbatim thread.
@@ -698,7 +714,11 @@ exports.handler = async (event) => {
     }
 
     // ── WRITE ASSISTANT MESSAGE AFTER ANTHROPIC RESPONSE ────────────────────────
-    if (sessionKey && lastUserMsg) {
+    // `|| autobrief` (2026-07-06): the silent brief prefetch has no lastUserMsg
+    // (see sessionKey assignment above) but its assistant reply still needs
+    // logging — otherwise it's permanently invisible to loadRecentThread on
+    // every later turn in the room. See that comment block for the full trace.
+    if (sessionKey && (lastUserMsg || autobrief)) {
       const cleanMessage = message
         .replace(/%%AOP%%[\s\S]*?%%END_AOP%%/g, '')
         .replace(/%%RECEIPT%%[\s\S]*?%%END_RECEIPT%%/g, '')
