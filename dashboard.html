@@ -1200,14 +1200,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', window.location.pathname);
     switchView('setup');
     setTimeout(() => triggerAutoStart(), 600);
-  } else if (urlParams.get('view') === 'chat' && urlParams.get('autobrief') === 'true') {
+  } else if (urlParams.get('view') === 'chat') {
     // North Star Brief as the post-onboarding landing experience (2026-07-06).
-    // app.js sends returning users here instead of plain dashboard.html. Same
-    // switchView('chat') the nav-card onclick already uses — just fired on load
-    // instead of waiting for a click.
+    // app.js sends returning users here instead of plain dashboard.html.
+    // (2026-07-06, addendum 2) The old ?autobrief=true flag is no longer the
+    // trigger — switchView('chat') itself now checks whether the room is
+    // empty and fires the brief lookup if so (see switchView below). This
+    // just gets the user into the chat view; the empty-room check inside
+    // switchView is the ONE place the brief actually fires from, regardless
+    // of how the user arrived here.
     window.history.replaceState({}, '', window.location.pathname);
     switchView('chat');
-    setTimeout(() => triggerAutoBrief(), 300);
   } else {
     if (typeof restoreConversationThread === 'function') {
       restoreConversationThread('chat');
@@ -1919,6 +1922,17 @@ function switchView(name) {
   if (name === 'receipts') {
     initReceiptDatePicker();
     loadReceiptsView();
+  }
+  // North Star Brief auto-fire (2026-07-06, addendum 2): the trigger is now
+  // "the Daily Work room is empty at the moment it's entered" — not "arrived
+  // via a URL flag". Covers every entry path uniformly (login redirect,
+  // sidebar click, or anything else that calls switchView('chat')) with the
+  // same single check. If the room already has messages, do nothing — just
+  // show what's there. No persistence across a hard refresh is added here;
+  // a mid-conversation refresh emptying the room and the brief re-firing as
+  // a result is a known, accepted limitation for now.
+  if (name === 'chat' && chatHistories.chat.length === 0) {
+    triggerAutoBrief();
   }
 }
 function handleCoachingClick() {
