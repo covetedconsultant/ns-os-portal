@@ -77,7 +77,7 @@ const { handlePrepRoom } = require('./lib/prep-room.js');
 // and the entire room='chat' handler now live in
 // netlify/functions/lib/daily-brief-room.js. Loaded via require() below. See
 // project memory: project_chat_js_restructuring_plan.md.
-const { handleDailyBriefRoom } = require('./lib/daily-brief-room.js');
+const { handleDailyBriefRoom, saveDailyBrief } = require('./lib/daily-brief-room.js');
 
 // ── DAILY BRIEF ROOM ROUTING (added 2026-07-01) ─────────────────────────────
 // Detects the opening message and dispatches directly to CS-1 or CS-16 — no
@@ -460,7 +460,7 @@ exports.handler = async (event) => {
   await reportWritersReady;
 
   try {
-    const { messages, context, userName, userId, room, boxId } = JSON.parse(event.body);
+    const { messages, context, userName, userId, room, boxId, autobrief } = JSON.parse(event.body);
 
     // ── ERR-NET-25: reject requests whose Authorization token doesn't match ────
     // the claimed userId. userId is required for every real room; only allow it
@@ -476,18 +476,27 @@ exports.handler = async (event) => {
 
     let systemPrompt;
     let prepRoute = null; // set below when room === 'prep'; used later for report-write dispatch
+    // dailyBriefRoute (2026-07-06): tracked here, not just inside daily-brief-room.js,
+    // because the post-response save-back (North Star Brief lookup-or-generate) needs
+    // to know whether THIS turn was the cs-1 brief path, and that decision happens
+    // before the Anthropic call — the room handler resolves systemPrompt, but the
+    // model's reply (what actually gets saved) doesn't exist until after the fetch
+    // further down. See daily_briefs save block near the end of this handler.
+    let dailyBriefRoute = null;
 
     if (room === 'chat') {
-      // Full room='chat' (Daily Brief) handling now lives in
+      // Full room='chat' (Daily Brief / North Star Brief) handling now lives in
       // netlify/functions/lib/daily-brief-room.js. Same behavior as the prior
       // inline block — route detection, CS-9 overlay, and the receipt close
-      // block. Extracted 2026-07-02.
+      // block. Extracted 2026-07-02. Lookup-or-generate for the once-per-day
+      // North Star Brief added 2026-07-06 — see that file's header comment.
       const dailyBriefResult = await handleDailyBriefRoom(
-        { messages },
-        { getPrompt, buildReceiptCloseBlock, csReceiptShouldLoad, corsHeaders }
+        { messages, userId, autobrief },
+        { getPrompt, buildReceiptCloseBlock, csReceiptShouldLoad, corsHeaders, SUPABASE_URL, SUPABASE_SERVICE_KEY }
       );
       if (dailyBriefResult.response) return dailyBriefResult.response;
       systemPrompt = dailyBriefResult.systemPrompt;
+      dailyBriefRoute = dailyBriefResult.dailyBriefRoute || null;
 
     } else if (room === 'virtualteam') {
       // Full room='virtualteam' handling now lives in
@@ -711,6 +720,20 @@ exports.handler = async (event) => {
       .replace(/%%QUARTERLY%%[\s\S]*?%%END_QUARTERLY%%/g, '')
       .replace(/%%VT_PLAYBOOK%%[\s\S]*?%%END_VT_PLAYBOOK%%/g, '')
       .trim();
+
+    // ── NORTH STAR BRIEF save-back (2026-07-06) ─────────────────────────────
+    // Only fires when THIS turn was a fresh cs-1 generation (daily-brief-room.js's
+    // lookup already returned early with the saved reply on any cache hit — this
+    // only runs on a genuine miss-then-generate). Saves the same cleaned text the
+    // client displays, not the raw model output with %%RECEIPT%%/marker blocks
+    // still in it. Saves once per user per Eastern day; the (user_id, brief_date)
+    // unique constraint plus upsert in saveDailyBrief() makes this safe even if
+    // two requests land close together.
+    if (room === 'chat' && dailyBriefRoute === 'cs-1' && userId) {
+      saveDailyBrief(userId, cleanForClient, { SUPABASE_URL, SUPABASE_SERVICE_KEY }).catch(err => {
+        console.error('daily_briefs save-back fire-and-forget error:', err);
+      });
+    }
 
     const responseBody = { message: cleanForClient, hasLogsToday: !!sessionKey };
     if (reportHtml) {
