@@ -77,8 +77,11 @@ if (form) {
         // New user — no operating picture yet → route to setup view with auto-start
         window.location.href = 'dashboard.html?new=true';
       } else {
-        // Returning user — operating picture exists → go to dashboard home
-        window.location.href = 'dashboard.html';
+        // Returning user — operating picture exists → land on the North Star Brief
+        // (dashboard.html?view=chat&autobrief=true), not the static dashboard home.
+        // (2026-07-06) The brief is now the post-onboarding landing experience; the
+        // dashboard becomes one of three doors, not the default.
+        window.location.href = 'dashboard.html?view=chat&autobrief=true';
       }
     } catch (err) {
       // On network error, fall back to dashboard home (safe default)
