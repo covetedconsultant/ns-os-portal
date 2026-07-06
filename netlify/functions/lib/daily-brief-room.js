@@ -214,7 +214,7 @@ async function handleDailyBriefRoom({ messages, userId, autobrief }, deps) {
     if (csReceiptPrompt) {
       systemPrompt += buildReceiptCloseBlock(csReceiptPrompt, {
         triggerContext: 'daily_work',
-        roomsVisited: 'Daily Work — Chief of Staff'
+        roomsVisited: 'Daily Work'
       });
     }
   }
