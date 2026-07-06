@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-06-a-brief-silent-prefetch-chip-hierarchy -->
+  <!-- cache-bust: 2026-07-06-b-client-work-rename-option-labels -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -569,7 +569,7 @@
   </div>
   <div class="nav-btn locked" id="nav-coaching" onclick="handleCoachingClick()">
     <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    <div class="tooltip">Gold Tier</div>
+    <div class="tooltip">Client Work</div>
   </div>
   <div class="sidebar-bottom">
     <div class="nav-btn" id="nav-account" onclick="switchView('account')">
@@ -1383,7 +1383,10 @@ function renderBriefOfferButtons(rowEl, offers, chatId) {
     const signal = String(i + 1);
     const btn = document.createElement('button');
     btn.className = 'brief-offer-btn';
-    btn.textContent = offerText;
+    // "Option N: " prefix (2026-07-06) is display-only — the signal sent on
+    // click stays the bare "1"/"2"/"3" above, so cs9ShouldLoad's confirmSignals
+    // matching in daily-brief-room.js needs no change.
+    btn.textContent = 'Option ' + signal + ': ' + offerText;
     btn.onclick = () => {
       const inputId = chatId === 'chat' ? 'chat-input' : 'chat-input-' + chatId;
       const input = document.getElementById(inputId);
@@ -1993,7 +1996,7 @@ function switchView(name) {
 }
 function handleCoachingClick() {
   if ((userProfile?.tier || 1) >= 3) { switchView('coaching'); return; }
-  alert('The Gold Tier is available for coaching clients.\nContact support@covetedconsultant.com to upgrade.');
+  alert('Client Work is available for coaching clients.\nContact support@covetedconsultant.com to upgrade.');
 }
 
 // ── INPUT HANDLERS ────────────────────────────────────────────────────
