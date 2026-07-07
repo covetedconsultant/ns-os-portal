@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-06-d-celebration-banner -->
+  <!-- cache-bust: 2026-07-06-e-onboarding-error-copy -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -2183,7 +2183,20 @@ async function sendMessage(chatId) {
     }
     // Save session snapshot to history after first exchange
     if (isFirstUserMsg) saveSessionToHistory(chatId, text, displayText);
-  } catch (err) { typingEl.remove(); appendMessage(messagesId, 'assistant', 'Connection error. Please try again.'); console.error(err); }
+  } catch (err) {
+    typingEl.remove();
+    // Room-aware error copy (2026-07-06): the generic "Connection error" was
+    // especially confusing during onboarding specifically, because CS-11's
+    // own synthesis step can succeed server-side (the file gets saved) even
+    // when the reply never reaches the browser -- see LOG-DEPLOY-ERRORS
+    // ERR-NET-34. The setup room now tells the person exactly what to do
+    // instead of a generic dead-end message. Other rooms are unchanged.
+    const errorText = chatId === 'setup'
+      ? "Couldn't finish building your North Star. Resubmit your last answer to try again."
+      : 'Connection error. Please try again.';
+    appendMessage(messagesId, 'assistant', errorText);
+    console.error(err);
+  }
   sendBtn.disabled = false; input.focus();
 }
 
