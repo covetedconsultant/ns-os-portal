@@ -606,26 +606,27 @@ exports.handler = async (event) => {
       }
     }
 
-    // ── BUG FIX (2026-07-07, ERR-NET-35): guarantee a trailing user turn ────
-    // before the Anthropic call. Root cause: a brand-new user's FIRST-EVER
-    // North Star Brief request (autobrief:true) sends messages:[] with no
-    // conversation_logs history yet, so recentThread above is empty and
-    // convoMessages stays []. The Anthropic Messages API requires the final
-    // message in the array to have role:"user" — a request ending on the
-    // hardcoded assistant turn ("Understood. I have the full operating
-    // picture. Ready.") with nothing after it is REJECTED by Anthropic with
-    // a 400, which chat.js's `if (!response.ok) throw new Error('Anthropic
-    // API error')` turns into a 500 the client sees as "Connection error."
-    // This only affects the very first brief of a user's life — day 2+
-    // always has a real conversation_logs row to load, which already ends
-    // in a user turn. Fix: if convoMessages is still empty at this point
-    // (no history, and the raw request also had none), append the same
-    // __AUTOSTART__ sentinel already used elsewhere in this file for "start
-    // the brief" — this keeps the fix scoped to the exact empty-history case
-    // and doesn't touch any returning-user path (where convoMessages is
-    // already non-empty and this block is a no-op).
-    if (convoMessages.length === 0) {
-      convoMessages = [{ role: 'user', content: '__AUTOSTART__' }];
+    // ── BUG FIX (2026-07-07, ERR-NET-35, widened same day): guarantee a ─────
+    // trailing user turn before the Anthropic call. Root cause: the Anthropic
+    // Messages API requires the FINAL message in the array to have role:"user".
+    // The original narrow version of this fix only guarded convoMessages.length
+    // === 0 (a brand-new user's first-ever autobrief request, with no
+    // conversation_logs history yet). That was too narrow: it was found live,
+    // same day, that an autobrief request whose loaded recentThread happens to
+    // ALREADY END ON AN ASSISTANT TURN (e.g. an autobrief fetch was the most
+    // recent thing logged for this user+room, with no user reply logged after
+    // it yet -- a normal, reachable state, not just a theoretical one) hits the
+    // exact same 400-from-Anthropic-turned-500 failure, because convoMessages
+    // is non-empty but STILL doesn't end in role:"user". The empty-length
+    // check never catches this case. Fix: check the actual final entry's role,
+    // not just array length. Appends the same __AUTOSTART__ sentinel already
+    // used elsewhere in this file for "start the brief" only when the last
+    // turn isn't already role:"user" -- a no-op for the normal, common case
+    // (convoMessages already ends in a user turn), and now also covers both
+    // the originally-fixed empty case and this newly-found non-empty case
+    // with one check.
+    if (convoMessages.length === 0 || convoMessages[convoMessages.length - 1].role !== 'user') {
+      convoMessages = [...convoMessages, { role: 'user', content: '__AUTOSTART__' }];
     }
 
     const contextStr = buildContextString(context);
@@ -867,5 +868,4 @@ function buildContextString(ctx) {
 }
 
 function corsHeaders() {
-  return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
-}
+  return { '
