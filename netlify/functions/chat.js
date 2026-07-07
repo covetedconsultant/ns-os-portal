@@ -868,4 +868,5 @@ function buildContextString(ctx) {
 }
 
 function corsHeaders() {
-  return { '
+  return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
+}
