@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-06-c-silent-session-refresh -->
+  <!-- cache-bust: 2026-07-06-d-celebration-banner -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -223,6 +223,10 @@
        read left-to-right as a block, not sit on one nowrap line like a chip. */
     .brief-offer-btn { font-size: 13px; line-height: 1.5; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; white-space: normal; text-align: left; font-family: inherit; width: 100%; }
     .brief-offer-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
+    .celebration-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--gold-bg); border: 1px solid var(--gold); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
+    .celebration-banner-text { font-size: 16px; font-weight: 600; color: var(--text); }
+    .celebration-banner-btn { font-size: 14px; font-weight: 600; padding: 10px 18px; border: none; border-radius: 20px; background: var(--gold); color: #fff; cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
+    .celebration-banner-btn:hover { opacity: 0.88; }
     .vt-box-list { width: 100%; max-width: 660px; margin: 0 auto; padding: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
     .vt-box-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; transition: all 0.15s; font-family: inherit; }
     .vt-box-btn:hover { border-color: var(--gold); background: var(--gold-bg); }
@@ -1181,6 +1185,26 @@ function launchConfetti() {
   draw();
 }
 
+// Celebration-page CTA (2026-07-06): a real, explicit path off the confetti
+// screen straight into Daily Work -- previously the page just showed
+// confetti and left the user on Home with no next step named. Reuses
+// switchView('chat') exactly like the existing Home nav-card does, which
+// already triggers the empty-room brief prefetch on its own (see
+// switchView's own 2026-07-06 addendum-3 comment) -- no separate autobrief
+// flag needed.
+function showCelebrationBanner() {
+  const container = document.getElementById('home-state0');
+  if (!container || document.getElementById('celebration-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'celebration-banner';
+  banner.className = 'celebration-banner';
+  banner.innerHTML = `
+    <div class="celebration-banner-text">🎉 Your North Star is set.</div>
+    <button class="celebration-banner-btn" onclick="switchView('chat'); document.getElementById('celebration-banner').remove();">Head to your Daily Work →</button>
+  `;
+  container.prepend(banner);
+}
+
 // ── COUNTDOWN ───────────────────────────────────────────────────────
 function startCountdownRedirect(messagesId) {
   if (countdownActive) return;
@@ -1259,6 +1283,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
       await loadHomeContext();
       launchConfetti();
+      showCelebrationBanner();
     }, 800);
     window.history.replaceState({}, '', window.location.pathname);
   } else if (urlParams.get('new') === 'true' || urlParams.get('new') === 'pending') {
