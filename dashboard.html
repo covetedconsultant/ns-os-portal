@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-06-b-client-work-rename-option-labels -->
+  <!-- cache-bust: 2026-07-06-c-silent-session-refresh -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -1030,6 +1030,50 @@ function supabaseHeaders(token) {
 function chatApiHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token || ''}` };
 }
+
+// Silent session-refresh safety net (2026-07-06). Any /api/chat call can hit
+// a stale/expired session (native supabase-js auto-refresh is not reliably
+// firing across this app's fragment-based cross-origin session handoff --
+// see ERR-NET-23 in LOG-DEPLOY-ERRORS). Rather than chase the exact reason
+// the built-in refresh timer misses, this catches the actual symptom -- a
+// 401 from chat.js's verifyUserId guard -- and self-heals immediately: mints
+// a brand-new session via the same generate_link+verify mechanism already
+// proven at checkout (see claim-session.js), no password needed, no visible
+// login screen, then retries the original request exactly once. This
+// replaces the generic "Connection error" a dead session used to produce.
+async function fetchChatAPI(options) {
+  let res = await fetch(API_ENDPOINT, options);
+  if (res.status === 401) {
+    const refreshed = await refreshSessionSilently();
+    if (refreshed) {
+      res = await fetch(API_ENDPOINT, { ...options, headers: chatApiHeaders() });
+    }
+  }
+  return res;
+}
+
+async function refreshSessionSilently() {
+  try {
+    const uid = userProfile?.id || session?.userId;
+    if (!uid) return false;
+    const res = await fetch('/api/refresh-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: uid })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.access_token || !data.refresh_token) return false;
+    const { error } = await supabaseClient.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    if (error) { console.error('Silent refresh setSession failed:', error); return false; }
+    const { data: { session: freshSession } } = await supabaseClient.auth.getSession();
+    authSession = freshSession;
+    return true;
+  } catch (err) {
+    console.error('Silent refresh error:', err);
+    return false;
+  }
+}
 let session = null;
 let userProfile = null;
 let chatHistories = { setup: [], chat: [], prep: [], virtualteam: [] };
@@ -1249,7 +1293,7 @@ async function triggerAutoStart() {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, {
+    const res = await fetchChatAPI( {
       method: 'POST', headers: chatApiHeaders(),
       body: JSON.stringify({ messages: [{ role: 'user', content: '__AUTOSTART__' }], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name })
     });
@@ -1294,7 +1338,7 @@ function prefetchDailyBrief() {
   if (dailyBriefPrefetch) return dailyBriefPrefetch;
   dailyBriefPrefetch = (async () => {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, {
+    const res = await fetchChatAPI( {
       method: 'POST', headers: chatApiHeaders(),
       body: JSON.stringify({ messages: [], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'chat', autobrief: true })
     });
@@ -2022,7 +2066,7 @@ async function vtAutoStart() {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
+    const res = await fetchChatAPI( { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: chatHistories.virtualteam, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: 'virtualteam', boxId: vtSelectedBox }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -2082,7 +2126,7 @@ async function sendMessage(chatId) {
     const context = await buildContext();
     const reqBody = { messages: chatHistories[chatId], context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name, room: chatId };
     if (chatId === 'virtualteam') reqBody.boxId = vtSelectedBox;
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify(reqBody) });
+    const res = await fetchChatAPI( { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify(reqBody) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
@@ -2369,7 +2413,7 @@ async function retryMessage(messagesId, chatId) {
   const typingEl = appendTyping(messagesId);
   try {
     const context = await buildContext();
-    const res = await fetch(API_ENDPOINT, { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
+    const res = await fetchChatAPI( { method: 'POST', headers: chatApiHeaders(), body: JSON.stringify({ messages: hist, context, userId: userProfile?.id || session?.userId, userName: userProfile?.display_name }) });
     typingEl.remove();
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
