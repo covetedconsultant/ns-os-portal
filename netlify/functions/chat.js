@@ -606,6 +606,28 @@ exports.handler = async (event) => {
       }
     }
 
+    // ── BUG FIX (2026-07-07, ERR-NET-35): guarantee a trailing user turn ────
+    // before the Anthropic call. Root cause: a brand-new user's FIRST-EVER
+    // North Star Brief request (autobrief:true) sends messages:[] with no
+    // conversation_logs history yet, so recentThread above is empty and
+    // convoMessages stays []. The Anthropic Messages API requires the final
+    // message in the array to have role:"user" — a request ending on the
+    // hardcoded assistant turn ("Understood. I have the full operating
+    // picture. Ready.") with nothing after it is REJECTED by Anthropic with
+    // a 400, which chat.js's `if (!response.ok) throw new Error('Anthropic
+    // API error')` turns into a 500 the client sees as "Connection error."
+    // This only affects the very first brief of a user's life — day 2+
+    // always has a real conversation_logs row to load, which already ends
+    // in a user turn. Fix: if convoMessages is still empty at this point
+    // (no history, and the raw request also had none), append the same
+    // __AUTOSTART__ sentinel already used elsewhere in this file for "start
+    // the brief" — this keeps the fix scoped to the exact empty-history case
+    // and doesn't touch any returning-user path (where convoMessages is
+    // already non-empty and this block is a no-op).
+    if (convoMessages.length === 0) {
+      convoMessages = [{ role: 'user', content: '__AUTOSTART__' }];
+    }
+
     const contextStr = buildContextString(context);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -847,4 +869,3 @@ function buildContextString(ctx) {
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' };
 }
-
