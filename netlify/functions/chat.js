@@ -523,7 +523,21 @@ exports.handler = async (event) => {
       systemPrompt = prepResult.systemPrompt;
       prepRoute = prepResult.prepRoute;
     } else {
-      const hasOP = await hasOperatingPicture(userId);
+      // BUG FIX (2026-07-06): hasOperatingPicture(userId) was re-checked on
+      // EVERY turn in this room, not just the first. cs-11's own Step 3A
+      // writes the annual_operating_picture row server-side as soon as the
+      // model produces a correctly-formatted %%AOP%% block -- this can
+      // succeed even if the HTTP response never reaches the browser (e.g.
+      // a transport hiccup after the write but before the reply is sent).
+      // If the user then resubmits their last answer (not knowing the AOP
+      // already saved), that NEW turn saw hasOP=true and silently swapped
+      // from cs-11 to cs-12 mid-conversation -- a completely different
+      // prompt -- derailing Phase 3's closing sequence entirely. cs-11's
+      // own TRIGGER section says it "fires once, at the beginning of a new
+      // user's onboarding" -- so this decision must only be made on the
+      // room's first message, never re-decided on a later turn.
+      const isFirstSetupMessage = messages.filter(m => m.role === 'user').length === 1;
+      const hasOP = isFirstSetupMessage ? await hasOperatingPicture(userId) : false;
       if (!hasOP) {
         const cs11Prompt = await getPrompt('cs-11');
         if (!cs11Prompt) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'CS-11 not found in Supabase' }) };
