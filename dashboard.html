@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- cache-bust: 2026-07-06-e-onboarding-error-copy -->
+  <!-- cache-bust: 2026-07-07-a-celebration-view -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>North Star OS — Dashboard</title>
@@ -223,10 +223,15 @@
        read left-to-right as a block, not sit on one nowrap line like a chip. */
     .brief-offer-btn { font-size: 13px; line-height: 1.5; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; white-space: normal; text-align: left; font-family: inherit; width: 100%; }
     .brief-offer-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-bg); }
-    .celebration-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--gold-bg); border: 1px solid var(--gold); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
-    .celebration-banner-text { font-size: 16px; font-weight: 600; color: var(--text); }
-    .celebration-banner-btn { font-size: 14px; font-weight: 600; padding: 10px 18px; border: none; border-radius: 20px; background: var(--gold); color: #fff; cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
-    .celebration-banner-btn:hover { opacity: 0.88; }
+    /* Celebration view (2026-07-07): retired the old banner-over-Home pattern
+       (.celebration-banner) in favor of a dedicated full-screen view, same
+       pattern as view-home/view-setup/view-chat. See LOG-DEPLOY-ERRORS. */
+    .celebrate-wrap { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 56px 24px 60px; text-align: center; }
+    .celebrate-emoji { font-size: 56px; margin-bottom: 8px; }
+    .celebrate-title { font-size: 34px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+    .celebrate-sub { font-size: 17px; color: var(--text2); max-width: 480px; margin-bottom: 36px; line-height: 1.6; }
+    .celebrate-btn { font-size: 15px; font-weight: 600; padding: 14px 28px; border: none; border-radius: 24px; background: var(--gold); color: #fff; cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; }
+    .celebrate-btn:hover { background: var(--gold-light); }
     .vt-box-list { width: 100%; max-width: 660px; margin: 0 auto; padding: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
     .vt-box-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; transition: all 0.15s; font-family: inherit; }
     .vt-box-btn:hover { border-color: var(--gold); background: var(--gold-bg); }
@@ -802,6 +807,19 @@
     </div></div>
   </div>
 
+  <!-- Celebration (2026-07-07): dedicated full-screen destination reached at the
+       end of onboarding, via startCountdownRedirect() -> switchView('celebrate').
+       Replaces the old showCelebrationBanner()-over-Home pattern. Confetti fires
+       from the shared #confetti-canvas (already global) when this view is entered. -->
+  <div class="view" id="view-celebrate">
+    <div class="celebrate-wrap">
+      <div class="celebrate-emoji">🎉</div>
+      <div class="celebrate-title">Congratulations!</div>
+      <div class="celebrate-sub">Your North Star is set. Your Chief of Staff is ready to work through today with you.</div>
+      <button class="celebrate-btn" onclick="switchView('chat')">Head to your Daily Work →</button>
+    </div>
+  </div>
+
   <!-- Your Setup (Chat A) -->
   <div class="view" id="view-setup">
     <div class="chat-wrap">
@@ -1185,41 +1203,33 @@ function launchConfetti() {
   draw();
 }
 
-// Celebration-page CTA (2026-07-06): a real, explicit path off the confetti
-// screen straight into Daily Work -- previously the page just showed
-// confetti and left the user on Home with no next step named. Reuses
-// switchView('chat') exactly like the existing Home nav-card does, which
-// already triggers the empty-room brief prefetch on its own (see
-// switchView's own 2026-07-06 addendum-3 comment) -- no separate autobrief
-// flag needed.
-function showCelebrationBanner() {
-  const container = document.getElementById('home-state0');
-  if (!container || document.getElementById('celebration-banner')) return;
-  const banner = document.createElement('div');
-  banner.id = 'celebration-banner';
-  banner.className = 'celebration-banner';
-  banner.innerHTML = `
-    <div class="celebration-banner-text">🎉 Your North Star is set.</div>
-    <button class="celebration-banner-btn" onclick="switchView('chat'); document.getElementById('celebration-banner').remove();">Head to your Daily Work →</button>
-  `;
-  container.prepend(banner);
-}
+// showCelebrationBanner() retired 2026-07-07 -- replaced by the dedicated
+// view-celebrate screen (see switchView('celebrate') and its confetti call).
+// The old version prepended a banner into #home-state0 and relied on a full
+// page reload (?celebrate=true) to fire confetti, which landed the user back
+// on Home with confetti overlaid on top of Home's own content rather than a
+// distinct Congratulations destination. See LOG-DEPLOY-ERRORS.
 
 // ── COUNTDOWN ───────────────────────────────────────────────────────
+// (2026-07-07): now switches views directly (switchView('celebrate')) instead
+// of a full page reload to dashboard.html?celebrate=true. This is an in-SPA
+// transition -- no reload, no query-param round trip, and confetti now fires
+// from switchView() itself the moment the celebrate view is entered, not from
+// a DOMContentLoaded query-param check on the next page load.
 function startCountdownRedirect(messagesId) {
   if (countdownActive) return;
   countdownActive = true;
   const msgs = document.getElementById(messagesId);
   const wrapper = document.createElement('div'); wrapper.className = 'onboarding-countdown';
   const inner = document.createElement('div'); inner.className = 'onboarding-countdown-inner';
-  inner.innerHTML = `Taking you to your dashboard in <strong><span id="countdown-num">5</span></strong>… <a href="dashboard.html?celebrate=true">go now →</a>`;
+  inner.innerHTML = `Taking you to your dashboard in <strong><span id="countdown-num">5</span></strong>… <a onclick="switchView('celebrate')">go now →</a>`;
   wrapper.appendChild(inner); msgs.appendChild(wrapper); msgs.scrollTop = msgs.scrollHeight;
   let count = 5;
   const interval = setInterval(() => {
     count--;
     const el = document.getElementById('countdown-num');
     if (el) el.textContent = count;
-    if (count <= 0) { clearInterval(interval); window.location.href = 'dashboard.html?celebrate=true'; }
+    if (count <= 0) { clearInterval(interval); switchView('celebrate'); }
   }, 1000);
 }
 
@@ -1278,15 +1288,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadAdminView();
   document.getElementById('loading').style.display = 'none';
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('celebrate') === 'true') {
-    // Wait a beat for the AOP row to be fully committed, then reload home context
-    setTimeout(async () => {
-      await loadHomeContext();
-      launchConfetti();
-      showCelebrationBanner();
-    }, 800);
-    window.history.replaceState({}, '', window.location.pathname);
-  } else if (urlParams.get('new') === 'true' || urlParams.get('new') === 'pending') {
+  // ?celebrate=true handling retired 2026-07-07 -- startCountdownRedirect() now
+  // calls switchView('celebrate') directly (in-SPA), so this reload-based path
+  // is no longer reachable. See view-celebrate and its switchView() addendum.
+  if (urlParams.get('new') === 'true' || urlParams.get('new') === 'pending') {
     window.history.replaceState({}, '', window.location.pathname);
     switchView('setup');
     setTimeout(() => triggerAutoStart(), 600);
@@ -2039,13 +2044,20 @@ function rcptDownloadPDF(domId, btnEl) {
 
 // ── NAVIGATION ────────────────────────────────────────────────────────
 function switchView(name) {
-  ['home','setup','chat','prep','receipts','virtualteam','account','coaching','admin'].forEach(v => {
+  ['home','setup','chat','prep','receipts','virtualteam','account','coaching','admin','celebrate'].forEach(v => {
     const viewEl = document.getElementById('view-' + v); if (viewEl) viewEl.classList.toggle('active', v === name);
     const nb = document.getElementById('nav-' + v); if (nb && !nb.classList.contains('locked')) nb.classList.toggle('active', v === name);
   });
   if (name === 'receipts') {
     initReceiptDatePicker();
     loadReceiptsView();
+  }
+  // Celebration view (2026-07-07): confetti fires the moment this dedicated
+  // view is entered — see startCountdownRedirect(), which is the only caller.
+  // No nav item targets 'celebrate' (not in the sidebar), so this only ever
+  // fires from that one call site.
+  if (name === 'celebrate') {
+    launchConfetti();
   }
   // North Star Brief silent prefetch (2026-07-06, addendum 3 — supersedes
   // addendum 2's auto-DISPLAY): the trigger is still "the Daily Work room is
